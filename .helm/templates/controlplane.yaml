@@ -1,0 +1,15 @@
+{{- $root := .Values }}
+{{- range $host, $hostData := $root.cluster.controlplane.hosts }}
+kind: Secret
+apiVersion: v1
+metadata:
+  name: {{ printf "talos-machine-%s-cp-%s" $root.cluster.name $host }}
+  annotations:
+    cluster: {{ $root.cluster.name }}
+    hostname: {{ $host }}
+immutable: false
+type: Opaque
+stringData:
+  config: {{ include $root.cluster.controlplane.template $root.cluster | toYaml | nindent 4 }}
+---
+{{- end }}

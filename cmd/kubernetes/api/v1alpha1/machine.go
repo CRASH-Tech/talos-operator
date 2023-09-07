@@ -12,17 +12,22 @@ type Machine struct {
 	APIVersion string                     `json:"apiVersion"`
 	Kind       string                     `json:"kind"`
 	Metadata   api.CustomResourceMetadata `json:"metadata"`
-	//api.CustomResource
-	Spec   MachineSpec   `json:"spec"`
-	Status MachineStatus `json:"status"`
+	Spec       MachineSpec                `json:"spec"`
+	Status     MachineStatus              `json:"status"`
 }
 
 type MachineSpec struct {
-	Host   string      `json:"host"`
-	Params interface{} `json:"params"`
+	Host      string          `json:"host"`
+	Allocated bool            `json:"allocated"`
+	Pool      string          `json:"pool"`
+	Params    []MachineParams `json:"params"`
+}
+
+type MachineParams struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 type MachineStatus struct {
 	Status string `json:"status"`
-	Power  string `json:"power"`
 }

@@ -32,18 +32,27 @@ spec:
               type: object
               required:
                 - host
+                - allocated
               properties:
                 host:
                   type: string
+                allocated:
+                  type: boolean
+                pool:
+                  type: string
                 params:
-                  x-kubernetes-preserve-unknown-fields: true
-                  type: object
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      key:
+                        type: string
+                      value:
+                        type: string
             status:
               type: object
               properties:
                 status:
-                  type: string
-                power:
                   type: string
       subresources:
         status: {}
@@ -51,8 +60,11 @@ spec:
         - name: Status
           type: string
           jsonPath: .status.status
-        - name: Power
+        - name: Allocated
+          type: boolean
+          jsonPath: .spec.allocated
+        - name: Pool
           type: string
-          jsonPath: .status.power
+          jsonPath: .spec.pool
   conversion:
     strategy: None

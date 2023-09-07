@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api/v1alpha1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -20,21 +18,12 @@ type Machine struct {
 func (machine *Machine) New(m v1alpha1.Machine) (v1alpha1.Machine, error) {
 	m.APIVersion = "talos.xfix.org/v1alpha1"
 	m.Kind = "Machine"
-	//m.Metadata.CreationTimestamp = "2023-08-24T17:54:44Z"
+	m.Spec.Allocated = false
 	m.Metadata.CreationTimestamp = time.Now().Format("2006-01-02T15:04:05Z")
 
-	uns, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&m)
+	item, err := machine.client.dynamicCreate(machine.resourceId, &m)
 	if err != nil {
 		return v1alpha1.Machine{}, err
-	}
-
-	unst := unstructured.Unstructured{}
-
-	unst.Object = uns
-
-	item, err := machine.client.dynamicCreate(machine.resourceId, &unst)
-	if err != nil {
-		panic(err)
 	}
 
 	var result v1alpha1.Machine

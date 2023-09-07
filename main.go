@@ -10,7 +10,6 @@ import (
 
 	"github.com/CRASH-Tech/talos-operator/cmd/common"
 	kubernetes "github.com/CRASH-Tech/talos-operator/cmd/kubernetes"
-	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api"
 	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -129,44 +128,37 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	err := CreateNewMachine(host, params)
 	if err != nil {
 		log.Error(err)
+		w.WriteHeader(http.StatusAlreadyReported)
+		w.Write([]byte("Error!"))
 	}
-	//fmt.Fprintf(w, "Hello, %s!", r.URL.Path[1:])
 }
 
 func CreateNewMachine(host string, params map[string]string) error {
+	machine := v1alpha1.Machine{}
 
-	metadata := api.CustomResourceMetadata{
-		Name: "lola2",
+	machine.Metadata.Name = host
+	machine.Spec.Host = host
+	machine.Spec.Allocated = false
+
+	for k, v := range params {
+		p := v1alpha1.MachineParams{
+			Key:   k,
+			Value: v,
+		}
+		machine.Spec.Params = append(machine.Spec.Params, p)
 	}
-
-	spec := v1alpha1.MachineSpec{
-		Host:   host,
-		Params: params,
-	}
-
-	//lol := v1alpha1.Machine{}
-
-	machine := v1alpha1.Machine{
-		// APIVersion: "talos.xfix.org/v1alpha1",
-		// Kind:       "Machine",
-		// Metadata:   metadata,
-		Spec: spec,
-	}
-	machine.Metadata = metadata
-	// machine.APIVersion = "talos.xfix.org/v1alpha1"
-	// machine.Kind = "Machine"
-	// machine.Metadata.CreationTimestamp = "2023-08-24T17:54:44Z"
 
 	result, err := kClient.V1alpha1().Machine().New(machine)
 	if err != nil {
 		return err
 	}
 
-	log.Info("YYY", machine, result)
+	log.Debug("registered new machine: ", result)
 
 	return nil
 
 }
+
 
 // func processV1aplha1(kClient *kubernetes.Client) {
 // 	log.Info("Refreshing v1alpha1...")

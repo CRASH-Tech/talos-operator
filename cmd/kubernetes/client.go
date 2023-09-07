@@ -5,6 +5,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
@@ -28,8 +29,17 @@ func NewClient(ctx context.Context, dynamic dynamic.DynamicClient) *Client {
 	return &client
 }
 
-func (client *Client) dynamicCreate(resourceId schema.GroupVersionResource, obj *unstructured.Unstructured) ([]byte, error) {
-	item, err := client.dynamic.Resource(resourceId).Create(client.ctx, obj, metav1.CreateOptions{})
+func (client *Client) dynamicCreate(resourceId schema.GroupVersionResource, obj interface{}) ([]byte, error) {
+	uns, err := runtime.DefaultUnstructuredConverter.ToUnstructured(&obj)
+	if err != nil {
+		return nil, err
+	}
+
+	uObj := unstructured.Unstructured{}
+
+	uObj.Object = uns
+
+	item, err := client.dynamic.Resource(resourceId).Create(client.ctx, &uObj, metav1.CreateOptions{})
 	if err != nil {
 		return nil, err
 	}
