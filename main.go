@@ -162,7 +162,7 @@ func CreateNewMachine(host string, params map[string]string) error {
 }
 
 func Test() {
-	m := machine.BootstrapRequest{
+	m := machine.BootstrapRequest{}
 
 	a := machine.ApplyConfiguration{
 

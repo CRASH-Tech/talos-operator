@@ -7,6 +7,6 @@ immutable: false
 type: Opaque
 stringData:
   talos-config: "dsds"
-  machine-config: {{ include $templateData.template (dict "cluster" $.Values.cluster "template" $templateData ) | toYaml | nindent 4 }}
+  machine-config: {{ tpl (index $.Values.templates $templateData.template) (dict "Values" $.Values "Template" $.Template "cluster" $.Values.cluster "template" $templateData) | toYaml | indent 4 }}
 ---
 {{- end }}
