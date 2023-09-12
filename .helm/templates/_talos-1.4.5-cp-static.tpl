@@ -14,17 +14,17 @@ machine:
     defaultRuntimeSeccompProfileEnabled: true
     disableManifestsDirectory: true
   network:
-    hostname: {{ .host }}
+    hostname: {{ .template.hostname }}
     interfaces:
       - interface: eth0
         addresses:
-          - {{ .hostData.ip }}
+          - {{ .template.ip }}
         routes:
           - network: 0.0.0.0/0
-            gateway: {{ .hostData.gateway }}
+            gateway: {{ .template.gateway }}
         dhcp: false
         vip:
-          ip: {{ .hostData.vip }}
+          ip: {{ .template.vip }}
     nameservers: {{ .cluster.network.nameservers | toYaml | nindent 6 }}
   install:
     disk: /dev/sda

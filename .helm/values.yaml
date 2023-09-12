@@ -44,37 +44,32 @@ cluster:
     kube-proxy: registry.k8s.io/kube-proxy:v1.27.2
     kube-scheduler: registry.k8s.io/kube-scheduler:v1.27.2
 
-  pools:
-    # cp:
-    #   template: talos-1.4.5-cp-static
-    #   hosts:
-    #     k-test-m1:
-    #       ip: 10.171.120.151/24
-    #       gateway: 10.171.120.254
-    #       vip: 10.171.120.150
-    #     k-test-m2:
-    #       vip: 10.171.120.150
-    #     k-test-m3:
-    #       vip: 10.171.120.150
+  templates:
+    m1:
+      template: talos-1.4.5-cp-static
+      hostname: k-test-m1
+      ip: 10.171.120.151/24
+      gateway: 10.171.120.254
+      vip: 10.171.120.150
+    m2:
+      template: talos-1.4.5-cp-static
+      hostname: k-test-m2
+      ip: 10.171.120.152/24
+      gateway: 10.171.120.254
+      vip: 10.171.120.150
+    m3:
+      template: talos-1.4.5-cp-static
+      hostname: k-test-m3
+      ip: 10.171.120.153/24
+      gateway: 10.171.120.254
+      vip: 10.171.120.150
     workers:
       template: talos-1.4.5-worker-dhcp
 
 machines:
-  # k-test-m1:
-  #   host: 10.171.120.151
-  #   config: machine-k-test-cp-k-test-m1
-  #   params:
-  #     - key: p1
-  #       value: v1
-  # k-test-m2:
-  #   host: 10.171.120.152
-  #   config: machine-k-test-cp-k-test-m2
-  #   params:
-  #     - key: p1
-  #       value: v1
-  # k-test-m3:
-  #   host: 10.171.120.153
-  #   config: machine-k-test-cp-k-test-m3
-  #   params:
-  #     - key: p1
-  #       value: v1
+  k-test-m1:
+    host: 10.171.120.151
+    template: m1
+    params:
+      - key: p1
+        value: v1

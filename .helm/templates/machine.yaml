@@ -1,12 +1,11 @@
-{{- $root := .Values }}
-{{- range $machine, $machineData := $root.machines }}
+{{- range $machine, $machineData := $.Values.machines }}
 apiVersion: talos.xfix.org/v1alpha1
 kind: Machine
 metadata:
   name: {{ $machine }}
 spec:
   host: {{ $machineData.host }}
-  config: {{ $machineData.config }}
+  config: {{ printf "talos-k-%s-%s" $.Values.cluster.name $machineData.template }}
   params: {{ $machineData.params | toYaml | nindent 2 }}
 ---
 {{- end }}
