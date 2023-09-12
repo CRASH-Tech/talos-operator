@@ -1,7 +1,6 @@
-{{- define "talos-1.4.5-cp" -}}
+{{- define "talos-1.4.5-cp-staticip" -}}
 {{- $cluster := . }}
-{{- $controlplane := $cluster.controlplane }}
-{{- range $host, $hostData := $controlplane.hosts }}
+{{- range $host, $hostData := $cluster.poolss }}
 version: v1alpha1
 debug: false
 persist: true

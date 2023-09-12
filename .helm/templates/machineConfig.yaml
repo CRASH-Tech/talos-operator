@@ -1,0 +1,31 @@
+{{- $root := .Values }}
+
+{{- range $pool, $poolData := $root.cluster.pools }}
+{{- if $poolData.hosts }}
+{{- range $host, $hostData := $poolData.hosts }}
+{{- $data := (dict "cluster" $root.cluster "pool" $pool "poolData" $poolData "host" $host "hostData" $hostData) }}
+kind: Secret
+apiVersion: v1
+metadata:
+  name: {{ printf "machine-%s-%s-%s" $root.cluster.name $pool $host }}
+immutable: false
+type: Opaque
+stringData:
+  talos-config: "dsds"
+  machine-config: {{ include $poolData.template $data | toYaml | nindent 4 }}
+---
+{{- end }}
+{{- else }}
+{{- $data := (dict "cluster" $root.cluster "pool" $pool "poolData" $poolData) }}
+kind: Secret
+apiVersion: v1
+metadata:
+  name: {{ printf "machine-%s-%s" $root.cluster.name $pool }}
+immutable: false
+type: Opaque
+stringData:
+  talos-config: "dsds"
+  machine-config: {{ include $poolData.template $data | toYaml | nindent 4 }}
+---
+{{- end }}
+{{- end }}
