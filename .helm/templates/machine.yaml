@@ -5,7 +5,7 @@ metadata:
   name: {{ $machine }}
 spec:
   host: {{ $machineData.host }}
-  config: {{ printf "talos-k-%s-%s" $.Values.cluster.name $machineData.template }}
+  config: {{ printf "talos-%s-%s" $.Values.cluster.name $machineData.template }}
   params: {{ $machineData.params | toYaml | nindent 2 }}
 ---
 {{- end }}

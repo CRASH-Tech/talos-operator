@@ -73,3 +73,15 @@ machines:
     params:
       - key: p1
         value: v1
+  k-test-m2:
+    host: 10.171.120.152
+    template: m2
+    params:
+      - key: p1
+        value: v1
+  k-test-m3:
+    host: 10.171.120.153
+    template: m3
+    params:
+      - key: p1
+        value: v1
