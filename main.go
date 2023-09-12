@@ -11,6 +11,8 @@ import (
 	"github.com/CRASH-Tech/talos-operator/cmd/common"
 	kubernetes "github.com/CRASH-Tech/talos-operator/cmd/kubernetes"
 	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api/v1alpha1"
+	"github.com/siderolabs/talos/pkg/machinery/api/machine"
+	"github.com/siderolabs/talos/pkg/machinery/client"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/dynamic"
@@ -159,6 +161,27 @@ func CreateNewMachine(host string, params map[string]string) error {
 
 }
 
+func Test() {
+	m := machine.BootstrapRequest{
+
+	a := machine.ApplyConfiguration{
+
+	}
+
+	machine.
+
+	b := machine.ApplyConfigurationRequest{
+
+	}
+
+	}
+	c, err := client.New(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	c.Bootstrap(context.Background(), &m)
+	c.MachineClient.ApplyConfiguration()
+}
 
 // func processV1aplha1(kClient *kubernetes.Client) {
 // 	log.Info("Refreshing v1alpha1...")

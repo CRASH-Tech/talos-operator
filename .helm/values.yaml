@@ -1,3 +1,4 @@
+talosconfig: lol-secret
 cluster:
   name: k-test
   endpoint: https://10.171.120.200:6443
@@ -46,6 +47,9 @@ cluster:
     vip: 0.0.0.0
     hosts:
       k-test-m1:
-        ip: 
+        ip:
       k-test-m2:
       k-test-m3:
+
+
+talosconfig в cluster crd
