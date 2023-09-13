@@ -7,15 +7,16 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/CRASH-Tech/talos-operator/cmd/common"
 	kubernetes "github.com/CRASH-Tech/talos-operator/cmd/kubernetes"
 	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api/v1alpha1"
-	"github.com/siderolabs/talos/pkg/machinery/api/machine"
-	"github.com/siderolabs/talos/pkg/machinery/client"
+	talos "github.com/CRASH-Tech/talos-operator/cmd/talos"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/dynamic"
+	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -24,6 +25,7 @@ var (
 	version = "0.0.1"
 	config  common.Config
 	kClient *kubernetes.Client
+	tCLient *talos.Client
 )
 
 func init() {
@@ -63,33 +65,31 @@ func init() {
 			log.Fatal(err)
 		}
 	} else {
-		log.Printf("Using in-cluster configuration")
+		log.Info("Using in-cluster configuration")
 		restConfig, err = rest.InClusterConfig()
 		if err != nil {
 			log.Fatal(err)
 		}
 	}
 	config.DynamicClient = dynamic.NewForConfigOrDie(restConfig)
+	config.KubernetesClient = k8s.NewForConfigOrDie(restConfig)
 }
 
 func main() {
 	log.Infof("Starting talos-operator %s", version)
 
 	ctx := context.Background()
-	kClient = kubernetes.NewClient(ctx, *config.DynamicClient)
+	kClient = kubernetes.NewClient(ctx, *config.DynamicClient, *config.KubernetesClient)
+	tCLient = talos.NewClient(ctx)
 
-	err := listen()
-	if err != nil {
-		log.Panic(err)
+	tCLient.ApplyConfiguration("dsd")
+	listen()
+
+	for {
+		processV1aplha1(kClient)
+
+		time.Sleep(5 * time.Second)
 	}
-
-	//pClient := proxmox.NewClient(config.Clusters)
-
-	// for {
-	// 	processV1aplha1(kClient)
-
-	// 	time.Sleep(5 * time.Second)
-	// }
 }
 
 func readConfig(path string) (common.Config, error) {
@@ -108,14 +108,14 @@ func readConfig(path string) (common.Config, error) {
 	return config, err
 }
 
-func listen() error {
-	http.HandleFunc("/register", registerHandler)
-	err := http.ListenAndServe(config.Listen, nil)
-	if err != nil {
-		return err
-	}
-
-	return nil
+func listen() {
+	go func() {
+		http.HandleFunc("/register", registerHandler)
+		err := http.ListenAndServe(config.Listen, nil)
+		if err != nil {
+			log.Panic(err)
+		}
+	}()
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
@@ -158,131 +158,15 @@ func CreateNewMachine(host string, params map[string]string) error {
 	log.Debug("registered new machine: ", result)
 
 	return nil
-
 }
 
-func Test() {
-	m := machine.BootstrapRequest{}
+func processV1aplha1(kClient *kubernetes.Client) {
+	log.Info("Refreshing v1alpha1...")
 
-	a := machine.ApplyConfiguration{
-
-	}
-
-	machine.
-
-	b := machine.ApplyConfigurationRequest{
-
-	}
-
-	}
-	c, err := client.New(context.Background())
+	machines, err := kClient.GetMachineConfigs("talos-operator")
 	if err != nil {
-		panic(err)
+		log.Error(err)
 	}
-	c.Bootstrap(context.Background(), &m)
-	c.MachineClient.ApplyConfiguration()
+
+	log.Info(machines)
 }
-
-// func processV1aplha1(kClient *kubernetes.Client) {
-// 	log.Info("Refreshing v1alpha1...")
-// 	qemus, err := kClient.V1alpha1().Qemu().GetAll()
-// 	if err != nil {
-// 		log.Error(err)
-// 		return
-// 	}
-
-// 	for _, qemu := range qemus {
-// 		switch qemu.Status.Status {
-// 		case v1alpha1.STATUS_QEMU_EMPTY:
-// 			if qemu.Status.Status == v1alpha1.STATUS_QEMU_EMPTY && qemu.Metadata.DeletionTimestamp != "" {
-// 				qemu.RemoveFinalizers()
-// 				_, err = kClient.V1alpha1().Qemu().Patch(qemu)
-// 				if err != nil {
-// 					log.Errorf("cannot patch qemu cr %s: %s", qemu.Metadata.Name, err)
-
-// 					continue
-// 				}
-
-// 				continue
-// 			}
-
-// 			if qemu.Spec.Clone != "" {
-// 				qemu.Status.Status = v1alpha1.STATUS_QEMU_CLONING
-// 				qemu, err = updateQemuStatus(kClient, qemu)
-// 				if err != nil {
-// 					return
-// 				}
-
-// 				continue
-// 			}
-
-// 			qemu, err := getQemuPlace(pClient, qemu)
-// 			if err != nil {
-// 				log.Errorf("cannot get qemu place %s: %s", qemu.Metadata.Name, err)
-
-// 				continue
-// 			}
-
-// 			if qemu.Status.Status == v1alpha1.STATUS_QEMU_OUT_OF_SYNC {
-// 				qemu, err = updateQemuStatus(kClient, qemu)
-// 				if err != nil {
-// 					return
-// 				}
-
-// 				continue
-// 			}
-
-// 			qemu, err = createNewQemu(pClient, qemu)
-// 			if err != nil {
-// 				log.Errorf("cannot create qemu %s: %s", qemu.Metadata.Name, err)
-// 				if qemu.Status.Status == v1alpha1.STATUS_QEMU_EMPTY {
-// 					qemu = cleanQemuPlaceStatus(qemu)
-// 				}
-
-// 				qemu, err = updateQemuStatus(kClient, qemu)
-// 				if err != nil {
-// 					return
-// 				}
-
-// 				continue
-// 			}
-
-// 			qemu.Status.Status = v1alpha1.STATUS_QEMU_SYNCED
-// 			qemu, err = updateQemuStatus(kClient, qemu)
-// 			if err != nil {
-// 				return
-// 			}
-
-// 			// Need by proxmox api delay
-// 			time.Sleep(time.Second * 10)
-
-// 			continue
-
-// 			default:
-// 				qemu, err = checkQemuSyncStatus(pClient, qemu)
-// 				if err != nil {
-// 					log.Errorf("cannot get qemu sync status %s: %s", qemu.Metadata.Name, err)
-// 					qemu.Status.Status = v1alpha1.STATUS_QEMU_UNKNOWN
-// 					qemu, err = updateQemuStatus(kClient, qemu)
-// 					if err != nil {
-// 						return
-// 					}
-
-// 					continue
-// 				}
-
-// 				qemu, err = updateQemuStatus(kClient, qemu)
-// 				if err != nil {
-// 					return
-// 				}
-
-// 				continue
-// 			}
-// 		default:
-// 			log.Warnf("unknown qemu state: %s %s", qemu.Metadata.Name, qemu.Status.Status)
-
-// 			continue
-
-// 	}
-
-// }

@@ -8,7 +8,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-var ()
+type MachineConfig struct {
+	Name          string
+	MachineConfig string
+	TalosConfig   string
+	KubeConfig    string
+}
 
 type Machine struct {
 	client     *Client

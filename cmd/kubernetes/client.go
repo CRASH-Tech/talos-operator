@@ -9,21 +9,24 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 )
 
 type Client struct {
-	ctx     context.Context
-	dynamic dynamic.DynamicClient
+	ctx        context.Context
+	dynamic    dynamic.DynamicClient
+	kubernetes kubernetes.Clientset
 }
 
 type V1alpha1 struct {
 	client *Client
 }
 
-func NewClient(ctx context.Context, dynamic dynamic.DynamicClient) *Client {
+func NewClient(ctx context.Context, dynamic dynamic.DynamicClient, clientSet kubernetes.Clientset) *Client {
 	client := Client{
-		ctx:     ctx,
-		dynamic: dynamic,
+		ctx:        ctx,
+		dynamic:    dynamic,
+		kubernetes: clientSet,
 	}
 
 	return &client
@@ -140,4 +143,28 @@ func (v1alpha1 *V1alpha1) Machine() *Machine {
 	}
 
 	return &machine
+}
+
+func (client *Client) GetMachineConfigs(ns string) (map[string]MachineConfig, error) {
+	result := make(map[string]MachineConfig)
+
+	listOptions := metav1.ListOptions{
+		LabelSelector: "talos/secret-type=machineconfig",
+	}
+
+	data, err := client.kubernetes.CoreV1().Secrets(ns).List(client.ctx, listOptions)
+	if err != nil {
+		return result, err
+	}
+
+	for _, secret := range data.Items {
+		result[secret.Name] = MachineConfig{
+			Name:          secret.Name,
+			MachineConfig: string(secret.Data["machineconfig"]),
+			TalosConfig:   string(secret.Data["talosconfig"]),
+			KubeConfig:    string(secret.Data["kubeconfig"]),
+		}
+	}
+
+	return result, nil
 }

@@ -3,6 +3,8 @@ kind: Secret
 apiVersion: v1
 metadata:
   name: {{ printf "talos-%s-%s" $.Values.cluster.name $template }}
+  labels:
+    talos/secret-type: machineconfig
 immutable: false
 type: Opaque
 data:
