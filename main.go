@@ -161,14 +161,14 @@ func CreateNewMachine(host string, params map[string]string) error {
 func processV1aplha1(kClient *kubernetes.Client) {
 	log.Info("Refreshing v1alpha1...")
 
-	machines, err := kClient.GetMachineConfigs("talos-operator")
+	machineConfigs, err := kClient.GetMachineConfigs("talos-operator")
 	if err != nil {
 		log.Error(err)
 	}
 
-	for n, m := range machines {
-		log.Info(n, m.MachineSecrets)
-		tCLient = talos.NewClient(context.Background(), "10.171.120.151", m)
+	for _, machineConfig := range machineConfigs {
+		//log.Info(machineConfig.MachineSecrets)
+		tCLient = talos.NewClient(context.Background(), "10.171.120.151", machineConfig)
 
 		tCLient.ApplyConfiguration("dsd")
 		//log.Info(machines)

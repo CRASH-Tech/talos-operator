@@ -62,8 +62,7 @@ templates:
         key: {{ .cluster.secrets.certs.k8sserviceaccount.key }}
       apiServer:
         image: {{ index .cluster.images "api-server" }}
-        certSANs:
-          - 10.171.120.200
+        certSANs: {{ .cluster.certSANs | toYaml | nindent 6 }}
         disablePodSecurityPolicy: {{ .cluster.disablePodSecurityPolicy }}
         admissionControl:
           - name: PodSecurity
@@ -124,7 +123,7 @@ templates:
               name: admin-user
               namespace: kube-system
               annotations:
-              kubernetes.io/service-account.name: admin-user
+                kubernetes.io/service-account.name: admin-user
             type: kubernetes.io/service-account-token
         - name: admin-sa-crb
           contents: |-
@@ -138,8 +137,8 @@ templates:
               name: cluster-admin
             subjects:
               - kind: ServiceAccount
-              name: admin-user
-              namespace: kube-system
+                name: admin-user
+                namespace: kube-system
       adminKubeconfig:
         certLifetime: 87600h0m0s
       allowSchedulingOnControlPlanes: {{ .cluster.allowSchedulingOnControlPlanes }}
@@ -191,7 +190,9 @@ templates:
 
 cluster:
   name: k-test
-  endpoint: https://10.171.120.200:6443
+  endpoint: https://10.171.120.150:6443
+  certSANs:
+    - 10.171.120.150
   disablePodSecurityPolicy: true
   allowSchedulingOnControlPlanes: true
   network:
@@ -250,20 +251,20 @@ cluster:
       ip: 10.171.120.151/24
       gateway: 10.171.120.254
       vip: 10.171.120.150
-    m2:
-      template: talos-1.4.5-cp-static
-      hostname: k-test-m2
-      ip: 10.171.120.152/24
-      gateway: 10.171.120.254
-      vip: 10.171.120.150
-    m3:
-      template: talos-1.4.5-cp-static
-      hostname: k-test-m3
-      ip: 10.171.120.153/24
-      gateway: 10.171.120.254
-      vip: 10.171.120.150
-    workers:
-      template: talos-1.4.5-worker-dhcp
+    # m2:
+    #   template: talos-1.4.5-cp-static
+    #   hostname: k-test-m2
+    #   ip: 10.171.120.152/24
+    #   gateway: 10.171.120.254
+    #   vip: 10.171.120.150
+    # m3:
+    #   template: talos-1.4.5-cp-static
+    #   hostname: k-test-m3
+    #   ip: 10.171.120.153/24
+    #   gateway: 10.171.120.254
+    #   vip: 10.171.120.150
+    # workers:
+    #   template: talos-1.4.5-worker-dhcp
 
 machines:
   k-test-m1:
@@ -272,15 +273,15 @@ machines:
     params:
       - key: p1
         value: v1
-  k-test-m2:
-    host: 10.171.120.152
-    template: m2
-    params:
-      - key: p1
-        value: v1
-  k-test-m3:
-    host: 10.171.120.153
-    template: m3
-    params:
-      - key: p1
-        value: v1
+  # k-test-m2:
+  #   host: 10.171.120.152
+  #   template: m2
+  #   params:
+  #     - key: p1
+  #       value: v1
+  # k-test-m3:
+  #   host: 10.171.120.153
+  #   template: m3
+  #   params:
+  #     - key: p1
+  #       value: v1
