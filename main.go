@@ -80,9 +80,7 @@ func main() {
 
 	ctx := context.Background()
 	kClient = kubernetes.NewClient(ctx, *config.DynamicClient, *config.KubernetesClient)
-	tCLient = talos.NewClient(ctx)
 
-	tCLient.ApplyConfiguration("dsd")
 	listen()
 
 	for {
@@ -168,5 +166,13 @@ func processV1aplha1(kClient *kubernetes.Client) {
 		log.Error(err)
 	}
 
-	log.Info(machines)
+	for n, m := range machines {
+		log.Info(n, m.MachineSecrets)
+		tCLient = talos.NewClient(context.Background(), "10.171.120.151", m)
+
+		tCLient.ApplyConfiguration("dsd")
+		//log.Info(machines)
+		os.Exit(0)
+	}
+
 }

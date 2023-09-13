@@ -9,10 +9,17 @@ import (
 )
 
 type MachineConfig struct {
-	Name          string
-	MachineConfig string
-	TalosConfig   string
-	KubeConfig    string
+	Name           string
+	MachineConfig  string
+	MachineSecrets MachineSecrets
+	TalosConfig    string
+	KubeConfig     string
+}
+
+type MachineSecrets struct {
+	CA  string `yaml:"ca"`
+	Crt string `yaml:"crt"`
+	Key string `yaml:"key"`
 }
 
 type Machine struct {

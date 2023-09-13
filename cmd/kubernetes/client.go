@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"context"
 
+	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -158,11 +159,18 @@ func (client *Client) GetMachineConfigs(ns string) (map[string]MachineConfig, er
 	}
 
 	for _, secret := range data.Items {
+		var machineSecrets MachineSecrets
+		err = yaml.Unmarshal(secret.Data["machinesecrets"], &machineSecrets)
+		if err != nil {
+			return result, err
+		}
+
 		result[secret.Name] = MachineConfig{
-			Name:          secret.Name,
-			MachineConfig: string(secret.Data["machineconfig"]),
-			TalosConfig:   string(secret.Data["talosconfig"]),
-			KubeConfig:    string(secret.Data["kubeconfig"]),
+			Name:           secret.Name,
+			MachineConfig:  string(secret.Data["machineconfig"]),
+			TalosConfig:    string(secret.Data["talosconfig"]),
+			KubeConfig:     string(secret.Data["kubeconfig"]),
+			MachineSecrets: machineSecrets,
 		}
 	}
 
