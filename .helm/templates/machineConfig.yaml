@@ -6,7 +6,8 @@ metadata:
 immutable: false
 type: Opaque
 data:
-  talos-config: {{ include "talosconfig" $.Values | b64enc }}
-  machine-config: {{ tpl (index $.Values.templates $templateData.template) (dict "Values" $.Values "Template" $.Template "cluster" $.Values.cluster "template" $templateData) | b64enc }}
+  kubeconfig: "dsds"
+  talosconfig: {{ include "talosconfig" $.Values | b64enc }}
+  machineconfig: {{ tpl (index $.Values.templates $templateData.template) (dict "Values" $.Values "Template" $.Template "cluster" $.Values.cluster "template" $templateData) | b64enc }}
 ---
 {{- end }}
