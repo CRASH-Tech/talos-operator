@@ -25,7 +25,6 @@ var (
 	version = "0.0.1"
 	config  common.Config
 	kClient *kubernetes.Client
-	tCLient *talos.Client
 )
 
 func init() {
@@ -168,10 +167,14 @@ func processV1aplha1(kClient *kubernetes.Client) {
 
 	for _, machineConfig := range machineConfigs {
 		//log.Info(machineConfig.MachineSecrets)
-		tCLient = talos.NewClient(context.Background(), "10.171.120.151", machineConfig)
+		//tCLient = talos.NewClient(context.Background(), "10.171.120.151", machineConfig)
 
-		tCLient.ApplyConfiguration("dsd")
+		//tCLient.ApplyConfiguration("dsd")
 		//log.Info(machines)
+
+		ctx := context.Background()
+		//talos.ApplyConfiguration(ctx, "10.171.120.151", machineConfig)
+		talos.Bootstrap(ctx, "10.171.120.151", machineConfig)
 		os.Exit(0)
 	}
 
