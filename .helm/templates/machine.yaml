@@ -2,10 +2,11 @@
 apiVersion: talos.xfix.org/v1alpha1
 kind: Machine
 metadata:
-  name: {{ $machine }}
+  name: {{ printf "%s-%s" $.Values.cluster.name $machine }}
 spec:
   host: {{ $machineData.host }}
   config: {{ printf "talos-%s-%s" $.Values.cluster.name $machineData.template }}
+  bootstrap: {{ $machineData.bootstrap | default false }}
   params: {{ $machineData.params | toYaml | nindent 2 }}
 ---
 {{- end }}

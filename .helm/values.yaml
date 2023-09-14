@@ -196,7 +196,7 @@ cluster:
   disablePodSecurityPolicy: true
   allowSchedulingOnControlPlanes: true
   network:
-    cni: none
+    cni: flannel
     dnsDomain: cluster.local
     podSubnets:
       - 10.244.0.0/16
@@ -267,21 +267,22 @@ cluster:
     #   template: talos-1.4.5-worker-dhcp
 
 machines:
-  k-test-m1:
+  m1:
     host: 10.171.120.151
     template: m1
+    bootstrap: true
     params:
       - key: p1
         value: v1
-  # k-test-m2:
-  #   host: 10.171.120.152
-  #   template: m2
-  #   params:
-  #     - key: p1
-  #       value: v1
-  # k-test-m3:
-  #   host: 10.171.120.153
-  #   template: m3
-  #   params:
-  #     - key: p1
-  #       value: v1
+  m2:
+    host: 10.171.120.152
+    template: m2
+    params:
+      - key: p1
+        value: v1
+  m3:
+    host: 10.171.120.153
+    template: m3
+    params:
+      - key: p1
+        value: v1

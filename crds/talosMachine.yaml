@@ -32,11 +32,15 @@ spec:
               type: object
               required:
                 - host
+                - config
+                - bootstrap
               properties:
                 host:
                   type: string
                 config:
                   type: string
+                bootstrap:
+                  type: boolean
                 params:
                   type: array
                   items:
@@ -51,6 +55,8 @@ spec:
               properties:
                 status:
                   type: string
+                bootstrapped:
+                  type: boolean
       subresources:
         status: {}
       additionalPrinterColumns:

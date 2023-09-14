@@ -12,7 +12,6 @@ import (
 	"github.com/CRASH-Tech/talos-operator/cmd/common"
 	kubernetes "github.com/CRASH-Tech/talos-operator/cmd/kubernetes"
 	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api/v1alpha1"
-	talos "github.com/CRASH-Tech/talos-operator/cmd/talos"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/dynamic"
@@ -137,7 +136,7 @@ func CreateNewMachine(host string, params map[string]string) error {
 
 	machine.Metadata.Name = host
 	machine.Spec.Host = host
-	machine.Spec.Allocated = false
+	machine.Spec.Bootstrap = false
 
 	for k, v := range params {
 		p := v1alpha1.MachineParams{
@@ -147,7 +146,7 @@ func CreateNewMachine(host string, params map[string]string) error {
 		machine.Spec.Params = append(machine.Spec.Params, p)
 	}
 
-	result, err := kClient.V1alpha1().Machine().New(machine)
+	result, err := kClient.V1alpha1().Machine().Create(machine)
 	if err != nil {
 		return err
 	}
@@ -160,22 +159,34 @@ func CreateNewMachine(host string, params map[string]string) error {
 func processV1aplha1(kClient *kubernetes.Client) {
 	log.Info("Refreshing v1alpha1...")
 
-	machineConfigs, err := kClient.GetMachineConfigs("talos-operator")
-	if err != nil {
-		log.Error(err)
-	}
-
-	for _, machineConfig := range machineConfigs {
-		//log.Info(machineConfig.MachineSecrets)
-		//tCLient = talos.NewClient(context.Background(), "10.171.120.151", machineConfig)
-
-		//tCLient.ApplyConfiguration("dsd")
-		//log.Info(machines)
-
-		ctx := context.Background()
-		//talos.ApplyConfiguration(ctx, "10.171.120.151", machineConfig)
-		talos.Bootstrap(ctx, "10.171.120.151", machineConfig)
-		os.Exit(0)
-	}
-
 }
+
+// machines, err := kClient.V1alpha1().Machine().GetAll()
+// if err != nil {
+// 	panic(err)
+// }
+// log.Debug(machines)
+
+// machine, err := kClient.V1alpha1().Machine().Get("k-test-m1")
+// if err != nil {
+// 	panic(err)
+// }
+
+// machine.Status.Bootstrapped = false
+
+// _, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+// if err != nil {
+// 	panic(err)
+// }
+
+// machineConfigs, err := kClient.GetMachineConfigs("talos-operator")
+// if err != nil {
+// 	log.Error(err)
+// }
+
+// for _, machineConfig := range machineConfigs {
+// 	ctx := context.Background()
+// 	//talos.ApplyConfiguration(ctx, "10.171.120.151", machineConfig)
+// 	talos.Bootstrap(ctx, "10.171.120.151", machineConfig)
+// 	os.Exit(0)
+// }

@@ -27,10 +27,10 @@ type Machine struct {
 	resourceId schema.GroupVersionResource
 }
 
-func (machine *Machine) New(m v1alpha1.Machine) (v1alpha1.Machine, error) {
+func (machine *Machine) Create(m v1alpha1.Machine) (v1alpha1.Machine, error) {
 	m.APIVersion = "talos.xfix.org/v1alpha1"
 	m.Kind = "Machine"
-	m.Spec.Allocated = false
+	m.Spec.Bootstrap = false
 	m.Metadata.CreationTimestamp = time.Now().Format("2006-01-02T15:04:05Z")
 
 	item, err := machine.client.dynamicCreate(machine.resourceId, &m)
@@ -47,77 +47,77 @@ func (machine *Machine) New(m v1alpha1.Machine) (v1alpha1.Machine, error) {
 	return result, nil
 }
 
-// func (qemu *Qemu) Get(name string) (v1alpha1.Qemu, error) {
-// 	item, err := qemu.client.dynamicGet(qemu.resourceId, name)
-// 	if err != nil {
-// 		return v1alpha1.Qemu{}, err
-// 	}
+func (machine *Machine) Get(name string) (v1alpha1.Machine, error) {
+	item, err := machine.client.dynamicGet(machine.resourceId, name)
+	if err != nil {
+		return v1alpha1.Machine{}, err
+	}
 
-// 	var result v1alpha1.Qemu
-// 	err = json.Unmarshal(item, &result)
-// 	if err != nil {
-// 		return v1alpha1.Qemu{}, err
-// 	}
+	var result v1alpha1.Machine
+	err = json.Unmarshal(item, &result)
+	if err != nil {
+		return v1alpha1.Machine{}, err
+	}
 
-// 	return result, nil
-// }
+	return result, nil
+}
 
-// func (qemu *Qemu) GetAll() ([]v1alpha1.Qemu, error) {
-// 	items, err := qemu.client.dynamicGetAll(qemu.resourceId)
-// 	if err != nil {
-// 		panic(err)
-// 	}
+func (machine *Machine) GetAll() ([]v1alpha1.Machine, error) {
+	items, err := machine.client.dynamicGetAll(machine.resourceId)
+	if err != nil {
+		panic(err)
+	}
 
-// 	var result []v1alpha1.Qemu
-// 	for _, item := range items {
-// 		var q v1alpha1.Qemu
-// 		err = json.Unmarshal(item, &q)
-// 		if err != nil {
-// 			return nil, err
-// 		}
+	var result []v1alpha1.Machine
+	for _, item := range items {
+		var q v1alpha1.Machine
+		err = json.Unmarshal(item, &q)
+		if err != nil {
+			return nil, err
+		}
 
-// 		result = append(result, q)
-// 	}
+		result = append(result, q)
+	}
 
-// 	return result, nil
-// }
+	return result, nil
+}
 
-// func (qemu *Qemu) Patch(q v1alpha1.Qemu) (v1alpha1.Qemu, error) {
-// 	jsonData, err := json.Marshal(q)
-// 	if err != nil {
-// 		return v1alpha1.Qemu{}, err
-// 	}
+func (machine *Machine) Patch(m v1alpha1.Machine) (v1alpha1.Machine, error) {
+	jsonData, err := json.Marshal(m)
+	if err != nil {
+		return v1alpha1.Machine{}, err
+	}
 
-// 	resp, err := qemu.client.dynamicPatch(qemu.resourceId, q.Metadata.Name, jsonData)
-// 	if err != nil {
-// 		return v1alpha1.Qemu{}, err
-// 	}
+	resp, err := machine.client.dynamicPatch(machine.resourceId, m.Metadata.Name, jsonData)
+	if err != nil {
+		return v1alpha1.Machine{}, err
+	}
 
-// 	var result v1alpha1.Qemu
-// 	err = json.Unmarshal(resp, &result)
-// 	if err != nil {
-// 		return v1alpha1.Qemu{}, err
-// 	}
+	var result v1alpha1.Machine
+	err = json.Unmarshal(resp, &result)
+	if err != nil {
+		return v1alpha1.Machine{}, err
+	}
 
-// 	return result, nil
-// }
+	return result, nil
+}
 
-// func (qemu *Qemu) UpdateStatus(q v1alpha1.Qemu) (v1alpha1.Qemu, error) {
-// 	jsonData, err := json.Marshal(q)
-// 	if err != nil {
-// 		return v1alpha1.Qemu{}, err
-// 	}
+func (machine *Machine) UpdateStatus(m v1alpha1.Machine) (v1alpha1.Machine, error) {
+	jsonData, err := json.Marshal(m)
+	if err != nil {
+		return v1alpha1.Machine{}, err
+	}
 
-// 	resp, err := qemu.client.dynamicUpdateStatus(qemu.resourceId, q.Metadata.Name, jsonData)
-// 	if err != nil {
-// 		return v1alpha1.Qemu{}, err
-// 	}
+	resp, err := machine.client.dynamicUpdateStatus(machine.resourceId, m.Metadata.Name, jsonData)
+	if err != nil {
+		return v1alpha1.Machine{}, err
+	}
 
-// 	var result v1alpha1.Qemu
-// 	err = json.Unmarshal(resp, &result)
-// 	if err != nil {
-// 		return v1alpha1.Qemu{}, err
-// 	}
+	var result v1alpha1.Machine
+	err = json.Unmarshal(resp, &result)
+	if err != nil {
+		return v1alpha1.Machine{}, err
+	}
 
-// 	return result, nil
-// }
+	return result, nil
+}

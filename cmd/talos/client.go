@@ -91,3 +91,20 @@ func ApplyConfiguration(ctx context.Context, endpoint string, machineConfig kube
 
 	return *resp, nil
 }
+
+// func Bootstrap1(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig) error {
+// 	log.Infof("Bootstrap: %s", endpoint)
+// 	client, err := newClient(ctx, endpoint, machineConfig)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	req := machine.BootstrapRequest{
+// 		RecoverEtcd:          false,
+// 		RecoverSkipHashCheck: true,
+// 	}
+
+// 	err = client.ClusterHealthCheck()
+
+// 	return nil
+// }

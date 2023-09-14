@@ -18,8 +18,8 @@ type Machine struct {
 
 type MachineSpec struct {
 	Host      string          `json:"host"`
-	Allocated bool            `json:"allocated"`
-	Pool      string          `json:"pool"`
+	Bootstrap bool            `json:"bootstrap"`
+	Config    string          `json:"config"`
 	Params    []MachineParams `json:"params"`
 }
 
@@ -29,5 +29,6 @@ type MachineParams struct {
 }
 
 type MachineStatus struct {
-	Status string `json:"status"`
+	Status       string `json:"status"`
+	Bootstrapped bool   `json:"bootstrapped"`
 }
