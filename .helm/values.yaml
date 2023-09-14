@@ -204,7 +204,7 @@ cluster:
       - 10.96.0.0/12
     nameservers:
       - 8.8.8.8
-      - 77.88.8.8
+      - 1.1.1.1
 
   secrets:
     cluster:
@@ -283,6 +283,12 @@ machines:
   m3:
     host: 10.171.120.153
     template: m3
+    params:
+      - key: p1
+        value: v1
+  w1:
+    host: 10.171.120.154
+    template: workers
     params:
       - key: p1
         value: v1

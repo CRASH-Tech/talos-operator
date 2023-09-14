@@ -184,11 +184,11 @@ func processV1aplha1(kClient *kubernetes.Client) {
 		if newHash != machine.Status.ConfigHash {
 			var mode talosMachine.ApplyConfigurationRequest_Mode
 			if machine.Status.ConfigHash == "" {
-				mode = talosMachine.ApplyConfigurationRequest_REBOOT
+				mode = talosMachine.ApplyConfigurationRequest_AUTO
 			} else {
 				mode = talosMachine.ApplyConfigurationRequest_NO_REBOOT
 			}
-			log.Infof("Apply new config to %s:%s mode: %s", machine.Metadata.Name, machine.Spec.Host, mode)
+			log.Infof("Apply new config to %s: %s mode: %s", machine.Metadata.Name, machine.Spec.Host, mode)
 			_, err := talos.ApplyConfiguration(ctx, machine.Spec.Host, machineConfig, mode)
 			if err != nil {
 				log.Error(err)
