@@ -88,14 +88,14 @@ machines:
   m2:
     host: 10.171.120.152
     template: m2
-    protected: true
+    protected: false
     params:
       - key: p1
         value: v1
   m3:
     host: 10.171.120.153
     template: m3
-    protected: true
+    protected: false
     params:
       - key: p1
         value: v1

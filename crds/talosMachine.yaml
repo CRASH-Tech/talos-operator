@@ -56,23 +56,32 @@ spec:
             status:
               type: object
               properties:
-                status:
-                  type: string
                 bootstrapped:
                   type: boolean
                 confighash:
                   type: string
+                services:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      service:
+                        type: string
+                      state:
+                        type: string
+                      health:
+                        type: boolean
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: Status
-          type: string
-          jsonPath: .status.status
         - name: Config
           type: string
           jsonPath: .spec.config
         - name: Protected
           type: string
           jsonPath: .spec.protected
+        - name: Services
+          type: string
+          jsonPath: .status.services
   conversion:
     strategy: None

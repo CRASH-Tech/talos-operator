@@ -30,7 +30,14 @@ type MachineParams struct {
 }
 
 type MachineStatus struct {
-	Status       string `json:"status"`
-	Bootstrapped bool   `json:"bootstrapped"`
-	ConfigHash   string `json:"confighash"`
+	Status       string           `json:"status"`
+	Bootstrapped bool             `json:"bootstrapped"`
+	ConfigHash   string           `json:"confighash"`
+	Services     []MachineService `json:"services"`
+}
+
+type MachineService struct {
+	Service string `json:"service"`
+	State   string `json:"state"`
+	Health  bool   `json:"health"`
 }

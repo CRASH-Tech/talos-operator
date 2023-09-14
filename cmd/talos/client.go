@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 
 	kubernetes "github.com/CRASH-Tech/talos-operator/cmd/kubernetes"
+	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api/v1alpha1"
 	"github.com/siderolabs/talos/pkg/machinery/api/machine"
 	"github.com/siderolabs/talos/pkg/machinery/client"
 	clientconfig "github.com/siderolabs/talos/pkg/machinery/client/config"
@@ -76,6 +77,18 @@ func ApplyConfiguration(ctx context.Context, endpoint string, machineConfig kube
 		return machine.ApplyConfigurationResponse{}, err
 	}
 
+	//TRY
+	tReq := machine.ApplyConfigurationRequest{
+		Mode: machine.ApplyConfigurationRequest_TRY,
+		Data: []byte(machineConfig.MachineConfig),
+	}
+
+	_, err = client.ApplyConfiguration(ctx, &tReq)
+	if err != nil {
+		return machine.ApplyConfigurationResponse{}, err
+	}
+
+	//APPLY
 	req := machine.ApplyConfigurationRequest{
 		Mode: mode,
 		Data: []byte(machineConfig.MachineConfig),
@@ -101,4 +114,31 @@ func Reset(ctx context.Context, endpoint string, machineConfig kubernetes.Machin
 	}
 
 	return nil
+}
+
+func Services(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig) ([]v1alpha1.MachineService, error) {
+	var result []v1alpha1.MachineService
+
+	client, err := newClient(ctx, endpoint, machineConfig)
+	if err != nil {
+		return result, err
+	}
+
+	services, err := client.ServiceList(ctx)
+	if err != nil {
+		return result, err
+	}
+
+	for _, msg := range services.Messages {
+		for _, service := range msg.Services {
+			s := v1alpha1.MachineService{
+				Service: service.Id,
+				State:   service.State,
+				Health:  service.Health.Healthy,
+			}
+			result = append(result, s)
+		}
+	}
+
+	return result, nil
 }

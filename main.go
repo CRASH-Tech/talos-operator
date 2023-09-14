@@ -172,15 +172,28 @@ func processV1aplha1(kClient *kubernetes.Client) {
 	}
 
 	for _, machine := range machines {
-		// PROTECTED CHECK
-		if machine.Spec.Protected {
-			log.Warningf("Machine %s(%s) is protected. Ignore it.", machine.Metadata.Name, machine.Spec.Host)
-			continue
-		}
-
 		machineConfig, err := kClient.GetMachineConfig(machine.Spec.Config, ns)
 		if err != nil {
 			log.Error(err)
+			continue
+		}
+
+		//SERVICES
+		services, err := talos.Services(ctx, machine.Spec.Host, machineConfig)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		machine.Status.Services = services
+		_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+
+		// PROTECTED CHECK
+		if machine.Spec.Protected {
+			log.Warningf("Machine %s(%s) is protected. Ignore it.", machine.Metadata.Name, machine.Spec.Host)
 			continue
 		}
 
