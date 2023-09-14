@@ -146,6 +146,29 @@ func (v1alpha1 *V1alpha1) Machine() *Machine {
 	return &machine
 }
 
+func (client *Client) GetMachineConfig(name, ns string) (MachineConfig, error) {
+	secret, err := client.kubernetes.CoreV1().Secrets(ns).Get(client.ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return MachineConfig{}, err
+	}
+
+	var machineSecrets MachineSecrets
+	err = yaml.Unmarshal(secret.Data["machinesecrets"], &machineSecrets)
+	if err != nil {
+		return MachineConfig{}, err
+	}
+
+	result := MachineConfig{
+		Name:           secret.Name,
+		MachineConfig:  string(secret.Data["machineconfig"]),
+		TalosConfig:    string(secret.Data["talosconfig"]),
+		KubeConfig:     string(secret.Data["kubeconfig"]),
+		MachineSecrets: machineSecrets,
+	}
+
+	return result, nil
+}
+
 func (client *Client) GetMachineConfigs(ns string) (map[string]MachineConfig, error) {
 	result := make(map[string]MachineConfig)
 

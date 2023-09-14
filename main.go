@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"flag"
 	"io/ioutil"
 	"net/http"
@@ -12,6 +14,8 @@ import (
 	"github.com/CRASH-Tech/talos-operator/cmd/common"
 	kubernetes "github.com/CRASH-Tech/talos-operator/cmd/kubernetes"
 	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api/v1alpha1"
+	"github.com/CRASH-Tech/talos-operator/cmd/talos"
+	talosMachine "github.com/siderolabs/talos/pkg/machinery/api/machine"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/dynamic"
@@ -158,6 +162,62 @@ func CreateNewMachine(host string, params map[string]string) error {
 
 func processV1aplha1(kClient *kubernetes.Client) {
 	log.Info("Refreshing v1alpha1...")
+	ctx := context.Background()
+
+	ns := "talos-operator"
+
+	machines, err := kClient.V1alpha1().Machine().GetAll()
+	if err != nil {
+		log.Error(err)
+	}
+
+	for _, machine := range machines {
+		machineConfig, err := kClient.GetMachineConfig(machine.Spec.Config, ns)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+
+		newHashB := md5.Sum([]byte(machineConfig.MachineConfig))
+		newHash := hex.EncodeToString(newHashB[:])
+
+		if newHash != machine.Status.ConfigHash {
+			var mode talosMachine.ApplyConfigurationRequest_Mode
+			if machine.Status.ConfigHash == "" {
+				mode = talosMachine.ApplyConfigurationRequest_REBOOT
+			} else {
+				mode = talosMachine.ApplyConfigurationRequest_NO_REBOOT
+			}
+			log.Infof("Apply new config to %s:%s mode: %s", machine.Metadata.Name, machine.Spec.Host, mode)
+			_, err := talos.ApplyConfiguration(ctx, machine.Spec.Host, machineConfig, mode)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+
+			machine.Status.ConfigHash = newHash
+			_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+		}
+
+		if machine.Status.ConfigHash != "" && machine.Spec.Bootstrap && !machine.Status.Bootstrapped {
+			log.Infof("Bootstrap %s:%s", machine.Metadata.Name, machine.Spec.Host)
+			err := talos.Bootstrap(ctx, machine.Spec.Host, machineConfig)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			machine.Status.Bootstrapped = true
+			_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+		}
+	}
 
 }
 

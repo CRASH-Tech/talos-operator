@@ -31,4 +31,5 @@ type MachineParams struct {
 type MachineStatus struct {
 	Status       string `json:"status"`
 	Bootstrapped bool   `json:"bootstrapped"`
+	ConfigHash   string `json:"confighash"`
 }
