@@ -1,11 +1,5 @@
 package api
 
-// type CustomResource struct {
-// 	APIVersion string                 `json:"apiVersion"`
-// 	Kind       string                 `json:"kind"`
-// 	Metadata   CustomResourceMetadata `json:"metadata"`
-// }
-
 type CustomResourceMetadata struct {
 	Name                       string   `json:"name"`
 	Uid                        string   `json:"uid"`
@@ -16,7 +10,3 @@ type CustomResourceMetadata struct {
 	DeletionTimestamp          string   `json:"deletionTimestamp,omitempty"`
 	Finalizers                 []string `json:"finalizers"`
 }
-
-// func (cr *CustomResource) RemoveFinalizers() {
-// 	cr.Metadata.Finalizers = []string{}
-// }

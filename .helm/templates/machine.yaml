@@ -3,6 +3,8 @@ apiVersion: talos.xfix.org/v1alpha1
 kind: Machine
 metadata:
   name: {{ printf "%s-%s" $.Values.cluster.name $machine }}
+  finalizers:
+    - resources-finalizer.talos-operator.xfix.org
 spec:
   host: {{ $machineData.host }}
   config: {{ printf "talos-%s-%s" $.Values.cluster.name $machineData.template }}
