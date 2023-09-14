@@ -8,5 +8,6 @@ spec:
   config: {{ printf "talos-%s-%s" $.Values.cluster.name $machineData.template }}
   bootstrap: {{ $machineData.bootstrap | default false }}
   params: {{ $machineData.params | toYaml | nindent 2 }}
+  protected: {{ $machineData.protected | default false }}
 ---
 {{- end }}

@@ -172,6 +172,11 @@ func processV1aplha1(kClient *kubernetes.Client) {
 	}
 
 	for _, machine := range machines {
+		if machine.Spec.Protected {
+			log.Infof("Machine %s is protected. Ignore it.", machine.Metadata.Name)
+			continue
+		}
+
 		machineConfig, err := kClient.GetMachineConfig(machine.Spec.Config, ns)
 		if err != nil {
 			log.Error(err)
@@ -208,7 +213,9 @@ func processV1aplha1(kClient *kubernetes.Client) {
 			err := talos.Bootstrap(ctx, machine.Spec.Host, machineConfig)
 			if err != nil {
 				log.Error(err)
-				continue
+				if !strings.Contains(err.Error(), "AlreadyExists") {
+					continue
+				}
 			}
 			machine.Status.Bootstrapped = true
 			_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)

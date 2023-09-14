@@ -20,6 +20,7 @@ type MachineSpec struct {
 	Host      string          `json:"host"`
 	Bootstrap bool            `json:"bootstrap"`
 	Config    string          `json:"config"`
+	Protected bool            `json:"protected"`
 	Params    []MachineParams `json:"params"`
 }
 

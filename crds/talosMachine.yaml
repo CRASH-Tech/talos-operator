@@ -8,7 +8,7 @@ spec:
   group: talos.xfix.org
   names:
     plural: machine
-    singular: machine
+    singular: machines
     kind: Machine
     listKind: MachineList
   scope: Cluster
@@ -41,6 +41,9 @@ spec:
                   type: string
                 bootstrap:
                   type: boolean
+                protected:
+                  type: boolean
+                  default: false
                 params:
                   type: array
                   items:
@@ -67,6 +70,9 @@ spec:
           jsonPath: .status.status
         - name: Config
           type: string
-          jsonPath: .spec.Config
+          jsonPath: .spec.config
+        - name: Protected
+          type: string
+          jsonPath: .spec.protected
   conversion:
     strategy: None
