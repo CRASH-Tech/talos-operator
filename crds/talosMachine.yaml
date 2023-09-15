@@ -60,9 +60,8 @@ spec:
                   type: boolean
                 confighash:
                   type: string
-                applysuccess:
+                lastapplyfail:
                   type: boolean
-                  default: true
                 etcd:
                   type: string
                 apid:

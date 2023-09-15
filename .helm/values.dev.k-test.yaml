@@ -81,7 +81,7 @@ machines:
     host: 10.171.120.151
     template: m1
     bootstrap: true
-    protected: true
+    protected: false
     params:
       - key: p1
         value: v1

@@ -30,13 +30,13 @@ type MachineParams struct {
 }
 
 type MachineStatus struct {
-	Bootstrapped bool   `json:"bootstrapped"`
-	ConfigHash   string `json:"confighash"`
-	ApplySuccess bool   `json:"applysuccess"`
-	Etcd         string `json:"etcd"`
-	Apid         string `json:"apid"`
-	Kubelet      string `json:"kubelet"`
-	Containerd   string `json:"containerd"`
-	Cri          string `json:"cri"`
-	Machined     string `json:"machined"`
+	Bootstrapped  bool   `json:"bootstrapped"`
+	ConfigHash    string `json:"confighash"`
+	LastApplyFail bool   `json:"lastapplyfail"`
+	Etcd          string `json:"etcd"`
+	Apid          string `json:"apid"`
+	Kubelet       string `json:"kubelet"`
+	Containerd    string `json:"containerd"`
+	Cri           string `json:"cri"`
+	Machined      string `json:"machined"`
 }

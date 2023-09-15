@@ -12,14 +12,10 @@ import (
 	"github.com/siderolabs/talos/pkg/machinery/api/machine"
 	"github.com/siderolabs/talos/pkg/machinery/client"
 	clientconfig "github.com/siderolabs/talos/pkg/machinery/client/config"
-	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
-const (
-	GRPC_TIMEOUT = 60
-)
-
-func newClient(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig, timeout int) (*client.Client, error) {
+func newClient(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig) (*client.Client, error) {
 	tCtx := clientconfig.Context{
 		CA:  machineConfig.MachineSecrets.CA,
 		Crt: machineConfig.MachineSecrets.Crt,
@@ -51,9 +47,9 @@ func newClient(ctx context.Context, endpoint string, machineConfig kubernetes.Ma
 
 	configTls := client.WithTLSConfig(tlsConfig)
 
-	configTimeout := client.WithGRPCDialOptions(grpc.WithTimeout(time.Second * time.Duration(timeout)))
+	//configTimeout := client.WithGRPCDialOptions(grpc.WithTimeout(time.Second * time.Duration(timeout)))
 
-	client, err := client.New(ctx, configTls, configContext, configEndpoints, configTimeout)
+	client, err := client.New(ctx, configTls, configContext, configEndpoints)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +58,7 @@ func newClient(ctx context.Context, endpoint string, machineConfig kubernetes.Ma
 }
 
 func Bootstrap(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig) error {
-	client, err := newClient(ctx, endpoint, machineConfig, GRPC_TIMEOUT)
+	client, err := newClient(ctx, endpoint, machineConfig)
 	if err != nil {
 		return err
 	}
@@ -83,7 +79,7 @@ func Bootstrap(ctx context.Context, endpoint string, machineConfig kubernetes.Ma
 }
 
 func ApplyConfiguration(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig, mode machine.ApplyConfigurationRequest_Mode) (machine.ApplyConfigurationResponse, error) {
-	client, err := newClient(ctx, endpoint, machineConfig, GRPC_TIMEOUT)
+	client, err := newClient(ctx, endpoint, machineConfig)
 	if err != nil {
 		return machine.ApplyConfigurationResponse{}, err
 	}
@@ -91,8 +87,9 @@ func ApplyConfiguration(ctx context.Context, endpoint string, machineConfig kube
 	defer client.Close()
 
 	req := machine.ApplyConfigurationRequest{
-		Mode: mode,
-		Data: []byte(machineConfig.MachineConfig),
+		Mode:           mode,
+		Data:           []byte(machineConfig.MachineConfig),
+		TryModeTimeout: durationpb.New(time.Minute * 5),
 	}
 
 	resp, err := client.ApplyConfiguration(ctx, &req)
@@ -104,19 +101,31 @@ func ApplyConfiguration(ctx context.Context, endpoint string, machineConfig kube
 }
 
 func Check(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig) bool {
-	status, err := ServicesStatus(ctx, endpoint, machineConfig, v1alpha1.MachineStatus{}, 10)
+	client, err := newClient(ctx, endpoint, machineConfig)
 	if err != nil {
 		return false
 	}
-	if status.Kubelet != "Running/Healthy" {
+
+	defer client.Close()
+
+	services, err := client.ServiceList(ctx)
+	if err != nil {
 		return false
+	}
+
+	for _, msg := range services.Messages {
+		for _, service := range msg.Services {
+			if service.Id == "kubelet" {
+				return service.Health.Healthy
+			}
+		}
 	}
 
 	return true
 }
 
 func Reset(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig) error {
-	client, err := newClient(ctx, endpoint, machineConfig, GRPC_TIMEOUT)
+	client, err := newClient(ctx, endpoint, machineConfig)
 	if err != nil {
 		return err
 	}
@@ -131,8 +140,8 @@ func Reset(ctx context.Context, endpoint string, machineConfig kubernetes.Machin
 	return nil
 }
 
-func ServicesStatus(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig, machineStatus v1alpha1.MachineStatus, timeout int) (v1alpha1.MachineStatus, error) {
-	client, err := newClient(ctx, endpoint, machineConfig, timeout)
+func ServicesStatus(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig, machineStatus v1alpha1.MachineStatus) (v1alpha1.MachineStatus, error) {
+	client, err := newClient(ctx, endpoint, machineConfig)
 	if err != nil {
 		return machineStatus, err
 	}
