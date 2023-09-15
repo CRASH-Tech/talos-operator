@@ -172,10 +172,18 @@ func processV1aplha1(kClient *kubernetes.Client) {
 
 	var roMode bool
 	for _, machine := range machines {
+		//CHECK FOR FAILLED HOSTS
 		if machine.Status.LastApplyFail {
 			log.Warn("One or more machines have failed apply config. Working in readonly mode")
 			roMode = true
 			break
+		}
+		//CHECK FOR SAME HOST
+		for _, m := range machines {
+			if m.Metadata.Name != machine.Metadata.Name && m.Spec.Host == machine.Spec.Host {
+				log.Warn("One or more machines have same host. Working in readonly mode")
+				roMode = true
+			}
 		}
 	}
 
