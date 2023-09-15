@@ -141,6 +141,14 @@ func Reset(ctx context.Context, endpoint string, machineConfig kubernetes.Machin
 }
 
 func ServicesStatus(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig, machineStatus v1alpha1.MachineStatus) (v1alpha1.MachineStatus, error) {
+	u := "Unknown"
+	machineStatus.Etcd = u
+	machineStatus.Apid = u
+	machineStatus.Kubelet = u
+	machineStatus.Containerd = u
+	machineStatus.Cri = u
+	machineStatus.Machined = u
+
 	client, err := newClient(ctx, endpoint, machineConfig)
 	if err != nil {
 		return machineStatus, err
@@ -152,14 +160,6 @@ func ServicesStatus(ctx context.Context, endpoint string, machineConfig kubernet
 	if err != nil {
 		return machineStatus, err
 	}
-
-	u := "Unknown"
-	machineStatus.Etcd = u
-	machineStatus.Apid = u
-	machineStatus.Kubelet = u
-	machineStatus.Containerd = u
-	machineStatus.Cri = u
-	machineStatus.Machined = u
 
 	for _, msg := range services.Messages {
 		for _, service := range msg.Services {
