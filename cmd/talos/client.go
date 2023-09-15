@@ -153,6 +153,14 @@ func ServicesStatus(ctx context.Context, endpoint string, machineConfig kubernet
 		return machineStatus, err
 	}
 
+	u := "Unknown"
+	machineStatus.Etcd = u
+	machineStatus.Apid = u
+	machineStatus.Kubelet = u
+	machineStatus.Containerd = u
+	machineStatus.Cri = u
+	machineStatus.Machined = u
+
 	for _, msg := range services.Messages {
 		for _, service := range msg.Services {
 			var health string
