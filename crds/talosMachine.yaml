@@ -77,12 +77,18 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
-        - name: Config
+        - name: host
+          type: string
+          jsonPath: .spec.host
+        - name: config
           type: string
           jsonPath: .spec.config
         - name: Protected
           type: string
           jsonPath: .spec.protected
+        - name: configfail
+          type: string
+          jsonPath: .status.lastapplyfail
         - name: etcd
           type: string
           jsonPath: .status.etcd

@@ -187,7 +187,7 @@ func processV1aplha1(kClient *kubernetes.Client) {
 		}
 
 		///
-		// machine.Status.ApplySuccess = true
+		// machine.Status.LastApplyFail = false
 		// _, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
 		// continue
 		///
