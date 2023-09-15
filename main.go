@@ -178,84 +178,125 @@ func processV1aplha1(kClient *kubernetes.Client) {
 			continue
 		}
 
-		//SERVICES
-		services, err := talos.Services(ctx, machine.Spec.Host, machineConfig)
-		if err != nil {
-			log.Error(err)
-			continue
-		}
-		machine.Status.Services = services
-		_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
-		if err != nil {
-			log.Error(err)
-			continue
-		}
+		//PROTECTION CHECK
+		if !machine.Spec.Protected {
+			//MACHINE DELETION
+			if machine.Metadata.DeletionTimestamp != "" {
+				log.Infof("Deleting machine %s(%s)", machine.Metadata.Name, machine.Spec.Host)
+				err := talos.Reset(ctx, machine.Spec.Host, machineConfig)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
 
-		// PROTECTED CHECK
-		if machine.Spec.Protected {
-			log.Warningf("Machine %s(%s) is protected. Ignore it.", machine.Metadata.Name, machine.Spec.Host)
-			continue
-		}
+				machine.Metadata.Finalizers = []string{}
+				_, err = kClient.V1alpha1().Machine().Patch(machine)
+				if err != nil {
+					log.Error(err)
+				}
 
-		//MACHINE DELETION
-		if machine.Metadata.DeletionTimestamp != "" {
-			log.Infof("Deleting machine %s(%s)", machine.Metadata.Name, machine.Spec.Host)
-			err := talos.Reset(ctx, machine.Spec.Host, machineConfig)
-			if err != nil {
-				log.Error(err)
 				continue
 			}
 
-			machine.Metadata.Finalizers = []string{}
-			_, err = kClient.V1alpha1().Machine().Patch(machine)
-			if err != nil {
-				log.Error(err)
-			}
+			//APPLY CONFIG
+			newHashB := md5.Sum([]byte(machineConfig.MachineConfig))
+			newHash := hex.EncodeToString(newHashB[:])
 
-			continue
-		}
+			/////////////////
+			if newHash != machine.Status.ConfigHash {
+				if !machine.Status.ApplySuccess {
+					log.Warnf("Last apply config to %s(%s) fail. Ignoring it", machine.Metadata.Name, machine.Spec.Host)
+					continue
+				}
 
-		//APPLY CONFIG
-		newHashB := md5.Sum([]byte(machineConfig.MachineConfig))
-		newHash := hex.EncodeToString(newHashB[:])
-		if newHash != machine.Status.ConfigHash {
-			var mode talosMachine.ApplyConfigurationRequest_Mode
-			if machine.Status.ConfigHash == "" {
-				mode = talosMachine.ApplyConfigurationRequest_AUTO
-			} else {
-				mode = talosMachine.ApplyConfigurationRequest_NO_REBOOT
-			}
-			log.Infof("Apply new config to %s(%s) mode: %s", machine.Metadata.Name, machine.Spec.Host, mode)
-			_, err := talos.ApplyConfiguration(ctx, machine.Spec.Host, machineConfig, mode)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
+				var mode talosMachine.ApplyConfigurationRequest_Mode
+				if machine.Status.ConfigHash == "" {
+					mode = talosMachine.ApplyConfigurationRequest_AUTO
+				} else {
+					mode = talosMachine.ApplyConfigurationRequest_NO_REBOOT
+				}
 
-			machine.Status.ConfigHash = newHash
-			_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-		}
-		//BOOTSTRAP
-		if machine.Status.ConfigHash != "" && machine.Spec.Bootstrap && !machine.Status.Bootstrapped {
-			log.Infof("Bootstrap %s(%s)", machine.Metadata.Name, machine.Spec.Host)
-			err := talos.Bootstrap(ctx, machine.Spec.Host, machineConfig)
-			if err != nil {
-				log.Error(err)
-				if !strings.Contains(err.Error(), "AlreadyExists") {
+				//TRY
+				if mode == talosMachine.ApplyConfigurationRequest_NO_REBOOT {
+					tryMode := talosMachine.ApplyConfigurationRequest_TRY
+					log.Infof("Try new config to %s(%s) mode: %s", machine.Metadata.Name, machine.Spec.Host, tryMode)
+					_, err := talos.ApplyConfiguration(ctx, machine.Spec.Host, machineConfig, tryMode)
+					if err != nil {
+						log.Error(err)
+						machine.Status.ApplySuccess = false
+						_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+						if err != nil {
+							log.Error(err)
+							continue
+						}
+						continue
+					}
+					time.Sleep(time.Second * 5)
+					log.Infof("Check is machine alive %s(%s)", machine.Metadata.Name, machine.Spec.Host)
+					if !talos.Check(ctx, machine.Spec.Host, machineConfig) {
+						machine.Status.ApplySuccess = false
+						_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+						if err != nil {
+							log.Error(err)
+							continue
+						}
+						continue
+					}
+				}
+
+				log.Infof("Apply new config to %s(%s) mode: %s", machine.Metadata.Name, machine.Spec.Host, mode)
+				_, err := talos.ApplyConfiguration(ctx, machine.Spec.Host, machineConfig, mode)
+				if err != nil {
+					log.Error(err)
+					machine.Status.ApplySuccess = false
+					_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+					if err != nil {
+						log.Error(err)
+						continue
+					}
+					continue
+				}
+
+				machine.Status.ConfigHash = newHash
+				_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+				if err != nil {
+					log.Error(err)
 					continue
 				}
 			}
-			machine.Status.Bootstrapped = true
-			_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
-			if err != nil {
-				log.Error(err)
-				continue
+
+			//BOOTSTRAP
+			if machine.Status.ConfigHash != "" && machine.Spec.Bootstrap && !machine.Status.Bootstrapped {
+				log.Infof("Bootstrap %s(%s)", machine.Metadata.Name, machine.Spec.Host)
+				err := talos.Bootstrap(ctx, machine.Spec.Host, machineConfig)
+				if err != nil {
+					log.Error(err)
+					if !strings.Contains(err.Error(), "AlreadyExists") {
+						continue
+					}
+				}
+				machine.Status.Bootstrapped = true
+				_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+				if err != nil {
+					log.Error(err)
+					continue
+				}
 			}
+		} else {
+			log.Warningf("Machine %s(%s) is protected. Ignore it.", machine.Metadata.Name, machine.Spec.Host)
 		}
+
+		//SERVICES
+		servicesStatus, err := talos.ServicesStatus(ctx, machine.Spec.Host, machineConfig, machine.Status, talos.GRPC_TIMEOUT)
+		if err != nil {
+			log.Error(err)
+		}
+		machine.Status = servicesStatus
+		_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+		if err != nil {
+			log.Error(err)
+		}
+
 	}
 
 }

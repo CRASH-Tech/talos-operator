@@ -4,15 +4,22 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/base64"
+	"fmt"
+	"time"
 
 	kubernetes "github.com/CRASH-Tech/talos-operator/cmd/kubernetes"
 	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api/v1alpha1"
 	"github.com/siderolabs/talos/pkg/machinery/api/machine"
 	"github.com/siderolabs/talos/pkg/machinery/client"
 	clientconfig "github.com/siderolabs/talos/pkg/machinery/client/config"
+	"google.golang.org/grpc"
 )
 
-func newClient(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig) (*client.Client, error) {
+const (
+	GRPC_TIMEOUT = 60
+)
+
+func newClient(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig, timeout int) (*client.Client, error) {
 	tCtx := clientconfig.Context{
 		CA:  machineConfig.MachineSecrets.CA,
 		Crt: machineConfig.MachineSecrets.Crt,
@@ -44,7 +51,9 @@ func newClient(ctx context.Context, endpoint string, machineConfig kubernetes.Ma
 
 	configTls := client.WithTLSConfig(tlsConfig)
 
-	client, err := client.New(ctx, configTls, configContext, configEndpoints)
+	configTimeout := client.WithGRPCDialOptions(grpc.WithTimeout(time.Second * time.Duration(timeout)))
+
+	client, err := client.New(ctx, configTls, configContext, configEndpoints, configTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -53,10 +62,12 @@ func newClient(ctx context.Context, endpoint string, machineConfig kubernetes.Ma
 }
 
 func Bootstrap(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig) error {
-	client, err := newClient(ctx, endpoint, machineConfig)
+	client, err := newClient(ctx, endpoint, machineConfig, GRPC_TIMEOUT)
 	if err != nil {
 		return err
 	}
+
+	defer client.Close()
 
 	req := machine.BootstrapRequest{
 		RecoverEtcd:          false,
@@ -72,23 +83,13 @@ func Bootstrap(ctx context.Context, endpoint string, machineConfig kubernetes.Ma
 }
 
 func ApplyConfiguration(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig, mode machine.ApplyConfigurationRequest_Mode) (machine.ApplyConfigurationResponse, error) {
-	client, err := newClient(ctx, endpoint, machineConfig)
+	client, err := newClient(ctx, endpoint, machineConfig, GRPC_TIMEOUT)
 	if err != nil {
 		return machine.ApplyConfigurationResponse{}, err
 	}
 
-	//TRY
-	tReq := machine.ApplyConfigurationRequest{
-		Mode: machine.ApplyConfigurationRequest_TRY,
-		Data: []byte(machineConfig.MachineConfig),
-	}
+	defer client.Close()
 
-	_, err = client.ApplyConfiguration(ctx, &tReq)
-	if err != nil {
-		return machine.ApplyConfigurationResponse{}, err
-	}
-
-	//APPLY
 	req := machine.ApplyConfigurationRequest{
 		Mode: mode,
 		Data: []byte(machineConfig.MachineConfig),
@@ -102,11 +103,25 @@ func ApplyConfiguration(ctx context.Context, endpoint string, machineConfig kube
 	return *resp, nil
 }
 
+func Check(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig) bool {
+	status, err := ServicesStatus(ctx, endpoint, machineConfig, v1alpha1.MachineStatus{}, 10)
+	if err != nil {
+		return false
+	}
+	if status.Kubelet != "Running/Healthy" {
+		return false
+	}
+
+	return true
+}
+
 func Reset(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig) error {
-	client, err := newClient(ctx, endpoint, machineConfig)
+	client, err := newClient(ctx, endpoint, machineConfig, GRPC_TIMEOUT)
 	if err != nil {
 		return err
 	}
+
+	defer client.Close()
 
 	err = client.Reset(ctx, true, false)
 	if err != nil {
@@ -116,29 +131,46 @@ func Reset(ctx context.Context, endpoint string, machineConfig kubernetes.Machin
 	return nil
 }
 
-func Services(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig) ([]v1alpha1.MachineService, error) {
-	var result []v1alpha1.MachineService
-
-	client, err := newClient(ctx, endpoint, machineConfig)
+func ServicesStatus(ctx context.Context, endpoint string, machineConfig kubernetes.MachineConfig, machineStatus v1alpha1.MachineStatus, timeout int) (v1alpha1.MachineStatus, error) {
+	client, err := newClient(ctx, endpoint, machineConfig, timeout)
 	if err != nil {
-		return result, err
+		return machineStatus, err
 	}
+
+	defer client.Close()
 
 	services, err := client.ServiceList(ctx)
 	if err != nil {
-		return result, err
+		return machineStatus, err
 	}
 
 	for _, msg := range services.Messages {
 		for _, service := range msg.Services {
-			s := v1alpha1.MachineService{
-				Service: service.Id,
-				State:   service.State,
-				Health:  service.Health.Healthy,
+			var health string
+
+			if service.Health.Healthy {
+				health = "Healthy"
+			} else {
+				health = "Unhealthy"
 			}
-			result = append(result, s)
+			status := fmt.Sprintf("%s/%s", service.State, health)
+			switch service.Id {
+			case "etcd":
+				machineStatus.Etcd = status
+			case "apid":
+				machineStatus.Apid = status
+			case "kubelet":
+				machineStatus.Kubelet = status
+			case "containerd":
+				machineStatus.Containerd = status
+			case "cri":
+				machineStatus.Cri = status
+			case "machined":
+				machineStatus.Machined = status
+			default:
+			}
 		}
 	}
 
-	return result, nil
+	return machineStatus, nil
 }

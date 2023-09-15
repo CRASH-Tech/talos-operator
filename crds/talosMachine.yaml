@@ -60,17 +60,21 @@ spec:
                   type: boolean
                 confighash:
                   type: string
-                services:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      service:
-                        type: string
-                      state:
-                        type: string
-                      health:
-                        type: boolean
+                applysuccess:
+                  type: boolean
+                  default: true
+                etcd:
+                  type: string
+                apid:
+                  type: string
+                kubelet:
+                  type: string
+                containerd:
+                  type: string
+                cri:
+                  type: string
+                machined:
+                  type: string
       subresources:
         status: {}
       additionalPrinterColumns:
@@ -80,8 +84,23 @@ spec:
         - name: Protected
           type: string
           jsonPath: .spec.protected
-        - name: Services
+        - name: etcd
           type: string
-          jsonPath: .status.services
+          jsonPath: .status.etcd
+        - name: apid
+          type: string
+          jsonPath: .status.apid
+        - name: kubelet
+          type: string
+          jsonPath: .status.kubelet
+        - name: containerd
+          type: string
+          jsonPath: .status.containerd
+        - name: cri
+          type: string
+          jsonPath: .status.cri
+        - name: machined
+          type: string
+          jsonPath: .status.machined
   conversion:
     strategy: None
