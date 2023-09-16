@@ -10,11 +10,6 @@ type MachineSelector struct {
 }
 
 type MachineSelectorSpec struct {
-	Config string                  `json:"config"`
-	Params []MachineSelectorParams `json:"params"`
-}
-
-type MachineSelectorParams struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Config string          `json:"config"`
+	Params []MachineParams `json:"params"`
 }

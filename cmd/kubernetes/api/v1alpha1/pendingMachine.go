@@ -10,11 +10,6 @@ type PendingMachine struct {
 }
 
 type PendingMachineSpec struct {
-	Host   string                 `json:"host"`
-	Params []PendingMachineParams `json:"params"`
-}
-
-type PendingMachineParams struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Host   string          `json:"host"`
+	Params []MachineParams `json:"params"`
 }

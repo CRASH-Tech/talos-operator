@@ -14,6 +14,7 @@ import (
 
 	"github.com/CRASH-Tech/talos-operator/cmd/common"
 	kubernetes "github.com/CRASH-Tech/talos-operator/cmd/kubernetes"
+	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api"
 	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api/v1alpha1"
 	"github.com/CRASH-Tech/talos-operator/cmd/talos"
 	talosMachine "github.com/siderolabs/talos/pkg/machinery/api/machine"
@@ -88,7 +89,7 @@ func main() {
 
 	for {
 		processV1aplha1MachineSelectors(kClient)
-		//processV1aplha1Machines(kClient)
+		processV1aplha1Machines(kClient)
 
 		time.Sleep(5 * time.Second)
 	}
@@ -132,10 +133,10 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 	pMachine.Metadata.Name = host
 	pMachine.Spec.Host = host
-	pMachine.Spec.Params = append(pMachine.Spec.Params, v1alpha1.PendingMachineParams{Key: "host", Value: host})
+	pMachine.Spec.Params = append(pMachine.Spec.Params, v1alpha1.MachineParams{Key: "host", Value: host})
 	for k, v := range params {
 		if v != "" {
-			p := v1alpha1.PendingMachineParams{
+			p := v1alpha1.MachineParams{
 				Key:   k,
 				Value: v,
 			}
@@ -143,7 +144,6 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	//CHECK IS ALREADY EXISTS
 	machines, err := kClient.V1alpha1().Machine().GetAll()
 	if err != nil {
 		log.Error(err)
@@ -152,6 +152,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
+	//CHECK IS ALREADY EXISTS
 	for _, machine := range machines {
 		if machine.Spec.Host == pMachine.Spec.Host {
 			log.Errorf("Received register query with already exists host: %s", pMachine.Spec.Host)
@@ -192,9 +193,71 @@ func processV1aplha1MachineSelectors(kClient *kubernetes.Client) {
 		return
 	}
 
-	for _, selector := range selectors {
-		for _, sParams := range selector.Spec.Params {
-			
+	for _, pMachine := range pMachines {
+		pass := false
+		fail := false
+		for _, selector := range selectors {
+			for _, sParam := range selector.Spec.Params {
+				for _, mParam := range pMachine.Spec.Params {
+					if sParam.Key == mParam.Key {
+						match, err := regexMatch(sParam.Value, mParam.Value)
+						if err != nil {
+							log.Error(err)
+							pass = false
+							fail = true
+						}
+
+						if match {
+							pass = true
+						} else {
+							fail = true
+						}
+					}
+				}
+			}
+
+			if pass && !fail {
+				log.Info("OOOK")
+				exists := false
+				machines, err := kClient.V1alpha1().Machine().GetAll()
+				if err != nil {
+					log.Error(err)
+					exists = true
+				}
+				for _, machine := range machines {
+					if machine.Spec.Host == pMachine.Spec.Host {
+						log.Errorf("Machine already exists: %s", pMachine.Spec.Host)
+						exists = true
+					}
+				}
+				/////////////////////////
+				if !exists {
+					err := kClient.V1alpha1().PendingMachine().Delete(pMachine)
+					if err != nil {
+						log.Error(err)
+
+						return
+					}
+
+					machine := v1alpha1.Machine{
+						Metadata: api.CustomResourceMetadata{
+							Name:       pMachine.Metadata.Name,
+							Finalizers: []string{"resources-finalizer.talos-operator.xfix.org"},
+						},
+						Spec: v1alpha1.MachineSpec{
+							Host:   pMachine.Spec.Host,
+							Config: selector.Spec.Config,
+							Params: pMachine.Spec.Params,
+						},
+					}
+					_, err = kClient.V1alpha1().Machine().Create(machine)
+					if err != nil {
+						log.Error(err)
+
+						return
+					}
+				}
+			}
 		}
 	}
 

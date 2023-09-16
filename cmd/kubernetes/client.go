@@ -105,6 +105,16 @@ func (client *Client) dynamicPatch(resourceId schema.GroupVersionResource, name 
 	return jsonData, nil
 }
 
+func (client *Client) dynamicDelete(resourceId schema.GroupVersionResource, name string) error {
+
+	err := client.dynamic.Resource(resourceId).Delete(client.ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (client *Client) dynamicUpdateStatus(resourceId schema.GroupVersionResource, name string, patch []byte) ([]byte, error) {
 	var data unstructured.Unstructured
 	err := data.UnmarshalJSON(patch)

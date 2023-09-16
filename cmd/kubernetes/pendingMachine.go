@@ -86,3 +86,12 @@ func (machine *PendingMachine) Patch(m v1alpha1.Machine) (v1alpha1.PendingMachin
 
 	return result, nil
 }
+
+func (machine *PendingMachine) Delete(m v1alpha1.PendingMachine) error {
+	err := machine.client.dynamicDelete(machine.resourceId, m.Metadata.Name)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
