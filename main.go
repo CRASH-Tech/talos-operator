@@ -30,6 +30,7 @@ var (
 	version = "0.0.1"
 	config  common.Config
 	kClient *kubernetes.Client
+	NS      string
 )
 
 func init() {
@@ -77,6 +78,8 @@ func init() {
 	}
 	config.DynamicClient = dynamic.NewForConfigOrDie(restConfig)
 	config.KubernetesClient = k8s.NewForConfigOrDie(restConfig)
+
+	NS = "talos-operator"
 }
 
 func main() {
@@ -88,7 +91,6 @@ func main() {
 	listen()
 
 	for {
-		processV1aplha1MachineSelectors(kClient)
 		processV1aplha1Machines(kClient)
 
 		time.Sleep(5 * time.Second)
@@ -121,28 +123,16 @@ func listen() {
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
-	host := strings.Split(r.RemoteAddr, ":")[0]
+	host := strings.Split(r.RemoteAddr, ":")[0] /////////////////////////////////////
+	//host := "10.171.120.166"
 	params := make(map[string]string)
+	params["host"] = host
+
 	for k, v := range r.URL.Query() {
 		params[k] = strings.Join(v, ",")
 	}
 
 	log.Infof("Register query received: %s %s", host, params)
-
-	pMachine := v1alpha1.PendingMachine{}
-
-	pMachine.Metadata.Name = host
-	pMachine.Spec.Host = host
-	pMachine.Spec.Params = append(pMachine.Spec.Params, v1alpha1.MachineParams{Key: "host", Value: host})
-	for k, v := range params {
-		if v != "" {
-			p := v1alpha1.MachineParams{
-				Key:   k,
-				Value: v,
-			}
-			pMachine.Spec.Params = append(pMachine.Spec.Params, p)
-		}
-	}
 
 	machines, err := kClient.V1alpha1().Machine().GetAll()
 	if err != nil {
@@ -154,8 +144,8 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	//CHECK IS ALREADY EXISTS
 	for _, machine := range machines {
-		if machine.Spec.Host == pMachine.Spec.Host {
-			log.Errorf("Received register query with already exists host: %s", pMachine.Spec.Host)
+		if machine.Spec.Host == host {
+			log.Errorf("Received register query with already exists host: %s", host)
 			w.WriteHeader(http.StatusAlreadyReported)
 			w.Write([]byte("Already exists!"))
 
@@ -163,111 +153,97 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	result, err := kClient.V1alpha1().PendingMachine().Create(pMachine)
-	if err != nil {
-		log.Error(err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
-
-		return
-	}
-
-	log.Infof("Registered new machine: %s", result)
-}
-
-func processV1aplha1MachineSelectors(kClient *kubernetes.Client) {
-	log.Info("Processing v1alpha1 machine selectors...")
-	//ctx := context.Background()
-
+	///////////////////////
 	selectors, err := kClient.V1alpha1().MachineSelector().GetAll()
 	if err != nil {
 		log.Error(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal error!"))
 
 		return
 	}
 
-	pMachines, err := kClient.V1alpha1().PendingMachine().GetAll()
-	if err != nil {
-		log.Error(err)
-
-		return
-	}
-
-	for _, pMachine := range pMachines {
+	for _, selector := range selectors {
 		pass := false
 		fail := false
-		for _, selector := range selectors {
-			for _, sParam := range selector.Spec.Params {
-				for _, mParam := range pMachine.Spec.Params {
-					if sParam.Key == mParam.Key {
-						match, err := regexMatch(sParam.Value, mParam.Value)
-						if err != nil {
-							log.Error(err)
-							pass = false
-							fail = true
-						}
-
-						if match {
-							pass = true
-						} else {
-							fail = true
-						}
-					}
-				}
-			}
-
-			if pass && !fail {
-				log.Info("OOOK")
-				exists := false
-				machines, err := kClient.V1alpha1().Machine().GetAll()
-				if err != nil {
-					log.Error(err)
-					exists = true
-				}
-				for _, machine := range machines {
-					if machine.Spec.Host == pMachine.Spec.Host {
-						log.Errorf("Machine already exists: %s", pMachine.Spec.Host)
-						exists = true
-					}
-				}
-				/////////////////////////
-				if !exists {
-					err := kClient.V1alpha1().PendingMachine().Delete(pMachine)
+		for _, sParam := range selector.Spec.Params {
+			for k, v := range params {
+				if sParam.Key == k {
+					match, err := regexMatch(sParam.Value, v)
 					if err != nil {
 						log.Error(err)
+						w.WriteHeader(http.StatusInternalServerError)
+						w.Write([]byte("Internal error!"))
 
 						return
 					}
 
-					machine := v1alpha1.Machine{
-						Metadata: api.CustomResourceMetadata{
-							Name:       pMachine.Metadata.Name,
-							Finalizers: []string{"resources-finalizer.talos-operator.xfix.org"},
-						},
-						Spec: v1alpha1.MachineSpec{
-							Host:   pMachine.Spec.Host,
-							Config: selector.Spec.Config,
-							Params: pMachine.Spec.Params,
-						},
-					}
-					_, err = kClient.V1alpha1().Machine().Create(machine)
-					if err != nil {
-						log.Error(err)
-
-						return
+					if match {
+						pass = true
+					} else {
+						fail = true
 					}
 				}
 			}
 		}
+		if pass && !fail {
+			ps := []v1alpha1.MachineParams{}
+			for k, v := range params {
+				if v != "" {
+					p := v1alpha1.MachineParams{
+						Key:   k,
+						Value: v,
+					}
+					ps = append(ps, p)
+				}
+			}
+
+			machine := v1alpha1.Machine{
+				Metadata: api.CustomResourceMetadata{
+					Name:       host,
+					Finalizers: []string{"resources-finalizer.talos-operator.xfix.org"},
+				},
+				Spec: v1alpha1.MachineSpec{
+					Host:   host,
+					Config: selector.Spec.Config,
+					Params: ps,
+				},
+			}
+			_, err = kClient.V1alpha1().Machine().Create(machine)
+			if err != nil {
+				log.Error(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("Internal error!"))
+
+				return
+			}
+
+			machineConfig, err := kClient.GetMachineConfig(selector.Spec.Config, NS)
+			if err != nil {
+				log.Error(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("Internal error!"))
+
+				return
+			}
+
+			log.Infof("Send machineconfig %s for: %s", selector.Spec.Config, host)
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(machineConfig.MachineConfig))
+
+			return
+		}
 	}
+
+	log.Warnf("No selector found for: %s", host)
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte("No selector found!"))
 
 }
 
 func processV1aplha1Machines(kClient *kubernetes.Client) {
 	log.Info("Processing v1alpha1 machines...")
 	ctx := context.Background()
-
-	ns := "talos-operator"
 
 	machines, err := kClient.V1alpha1().Machine().GetAll()
 	if err != nil {
@@ -294,7 +270,7 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 	}
 
 	for _, machine := range machines {
-		machineConfig, err := kClient.GetMachineConfig(machine.Spec.Config, ns)
+		machineConfig, err := kClient.GetMachineConfig(machine.Spec.Config, NS)
 		if err != nil {
 			log.Error(err)
 			continue

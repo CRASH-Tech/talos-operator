@@ -156,19 +156,6 @@ func (v1alpha1 *V1alpha1) Machine() *Machine {
 	return &machine
 }
 
-func (v1alpha1 *V1alpha1) PendingMachine() *PendingMachine {
-	pMachine := PendingMachine{
-		client: v1alpha1.client,
-		resourceId: schema.GroupVersionResource{
-			Group:    "talos.xfix.org",
-			Version:  "v1alpha1",
-			Resource: "pendingmachine",
-		},
-	}
-
-	return &pMachine
-}
-
 func (v1alpha1 *V1alpha1) MachineSelector() *MachineSelector {
 	selector := MachineSelector{
 		client: v1alpha1.client,
