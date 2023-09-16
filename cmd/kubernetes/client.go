@@ -146,6 +146,19 @@ func (v1alpha1 *V1alpha1) Machine() *Machine {
 	return &machine
 }
 
+func (v1alpha1 *V1alpha1) PendingMachine() *PendingMachine {
+	machine := PendingMachine{
+		client: v1alpha1.client,
+		resourceId: schema.GroupVersionResource{
+			Group:    "talos.xfix.org",
+			Version:  "v1alpha1",
+			Resource: "pendingmachine",
+		},
+	}
+
+	return &machine
+}
+
 func (client *Client) GetMachineConfig(name, ns string) (MachineConfig, error) {
 	secret, err := client.kubernetes.CoreV1().Secrets(ns).Get(client.ctx, name, metav1.GetOptions{})
 	if err != nil {

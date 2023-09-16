@@ -86,7 +86,7 @@ func main() {
 	listen()
 
 	for {
-		processV1aplha1(kClient)
+		processV1aplha1Machines(kClient)
 
 		time.Sleep(5 * time.Second)
 	}
@@ -124,42 +124,53 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		params[k] = strings.Join(v, ",")
 	}
 
-	log.Debug("register query received: ", host, params)
+	log.Infof("Register query received: %s %s", host, params)
 
-	err := CreateNewMachine(host, params)
-	if err != nil {
-		log.Error(err)
-		w.WriteHeader(http.StatusAlreadyReported)
-		w.Write([]byte("Error!"))
-	}
-}
+	pMachine := v1alpha1.PendingMachine{}
 
-func CreateNewMachine(host string, params map[string]string) error {
-	machine := v1alpha1.Machine{}
-
-	machine.Metadata.Name = host
-	machine.Spec.Host = host
-	machine.Spec.Bootstrap = false
+	pMachine.Metadata.Name = host
+	pMachine.Spec.Host = host
 
 	for k, v := range params {
-		p := v1alpha1.MachineParams{
+		p := v1alpha1.PendingMachineParams{
 			Key:   k,
 			Value: v,
 		}
-		machine.Spec.Params = append(machine.Spec.Params, p)
+		pMachine.Spec.Params = append(pMachine.Spec.Params, p)
 	}
 
-	result, err := kClient.V1alpha1().Machine().Create(machine)
+	//CHECK IS ALREADY EXISTS
+	machines, err := kClient.V1alpha1().Machine().GetAll()
 	if err != nil {
-		return err
+		log.Error(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Internal error!"))
+
+		return
+	}
+	for _, machine := range machines {
+		if machine.Spec.Host == pMachine.Spec.Host {
+			log.Errorf("Received register query with already exists host: %s", pMachine.Spec.Host)
+			w.WriteHeader(http.StatusAlreadyReported)
+			w.Write([]byte("Already exists!"))
+
+			return
+		}
 	}
 
-	log.Debug("registered new machine: ", result)
+	result, err := kClient.V1alpha1().PendingMachine().Create(pMachine)
+	if err != nil {
+		log.Error(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 
-	return nil
+		return
+	}
+
+	log.Infof("Registered new machine: %s", result)
 }
 
-func processV1aplha1(kClient *kubernetes.Client) {
+func processV1aplha1Machines(kClient *kubernetes.Client) {
 	log.Info("Refreshing v1alpha1...")
 	ctx := context.Background()
 

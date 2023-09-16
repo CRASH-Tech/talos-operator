@@ -2,12 +2,6 @@ package v1alpha1
 
 import "github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api"
 
-const (
-	STATUS_POWER_ON      = "ON"
-	STATUS_POWER_OFF     = "OFF"
-	STATUS_POWER_UNKNOWN = "UNKNOWN"
-)
-
 type Machine struct {
 	APIVersion string                     `json:"apiVersion"`
 	Kind       string                     `json:"kind"`
