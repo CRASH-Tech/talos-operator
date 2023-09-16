@@ -147,7 +147,7 @@ func (v1alpha1 *V1alpha1) Machine() *Machine {
 }
 
 func (v1alpha1 *V1alpha1) PendingMachine() *PendingMachine {
-	machine := PendingMachine{
+	pMachine := PendingMachine{
 		client: v1alpha1.client,
 		resourceId: schema.GroupVersionResource{
 			Group:    "talos.xfix.org",
@@ -156,7 +156,20 @@ func (v1alpha1 *V1alpha1) PendingMachine() *PendingMachine {
 		},
 	}
 
-	return &machine
+	return &pMachine
+}
+
+func (v1alpha1 *V1alpha1) MachineSelector() *MachineSelector {
+	selector := MachineSelector{
+		client: v1alpha1.client,
+		resourceId: schema.GroupVersionResource{
+			Group:    "talos.xfix.org",
+			Version:  "v1alpha1",
+			Resource: "machineselector",
+		},
+	}
+
+	return &selector
 }
 
 func (client *Client) GetMachineConfig(name, ns string) (MachineConfig, error) {

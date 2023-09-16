@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -86,7 +87,8 @@ func main() {
 	listen()
 
 	for {
-		processV1aplha1Machines(kClient)
+		processV1aplha1MachineSelectors(kClient)
+		//processV1aplha1Machines(kClient)
 
 		time.Sleep(5 * time.Second)
 	}
@@ -118,7 +120,7 @@ func listen() {
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
-	host := strings.Split(r.Host, ":")[0]
+	host := strings.Split(r.RemoteAddr, ":")[0]
 	params := make(map[string]string)
 	for k, v := range r.URL.Query() {
 		params[k] = strings.Join(v, ",")
@@ -130,13 +132,15 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 
 	pMachine.Metadata.Name = host
 	pMachine.Spec.Host = host
-
+	pMachine.Spec.Params = append(pMachine.Spec.Params, v1alpha1.PendingMachineParams{Key: "host", Value: host})
 	for k, v := range params {
-		p := v1alpha1.PendingMachineParams{
-			Key:   k,
-			Value: v,
+		if v != "" {
+			p := v1alpha1.PendingMachineParams{
+				Key:   k,
+				Value: v,
+			}
+			pMachine.Spec.Params = append(pMachine.Spec.Params, p)
 		}
-		pMachine.Spec.Params = append(pMachine.Spec.Params, p)
 	}
 
 	//CHECK IS ALREADY EXISTS
@@ -170,8 +174,34 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	log.Infof("Registered new machine: %s", result)
 }
 
+func processV1aplha1MachineSelectors(kClient *kubernetes.Client) {
+	log.Info("Processing v1alpha1 machine selectors...")
+	//ctx := context.Background()
+
+	selectors, err := kClient.V1alpha1().MachineSelector().GetAll()
+	if err != nil {
+		log.Error(err)
+
+		return
+	}
+
+	pMachines, err := kClient.V1alpha1().PendingMachine().GetAll()
+	if err != nil {
+		log.Error(err)
+
+		return
+	}
+
+	for _, selector := range selectors {
+		for _, sParams := range selector.Spec.Params {
+			
+		}
+	}
+
+}
+
 func processV1aplha1Machines(kClient *kubernetes.Client) {
-	log.Info("Refreshing v1alpha1...")
+	log.Info("Processing v1alpha1 machines...")
 	ctx := context.Background()
 
 	ns := "talos-operator"
@@ -179,6 +209,8 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 	machines, err := kClient.V1alpha1().Machine().GetAll()
 	if err != nil {
 		log.Error(err)
+
+		return
 	}
 
 	var roMode bool
@@ -336,5 +368,13 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 		}
 
 	}
+}
 
+func regexMatch(regex, value string) (bool, error) {
+	match, err := regexp.MatchString(regex, value)
+	if err != nil {
+		return false, err
+	}
+
+	return match, nil
 }

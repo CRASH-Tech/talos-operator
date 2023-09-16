@@ -105,3 +105,10 @@ machines:
     params:
       - key: p1
         value: v1
+
+machineSelectors:
+  k-test-workers:
+    template: workers
+    params:
+      - key: host
+        value: '^10\.171\.120\.\d{1,3}$'
