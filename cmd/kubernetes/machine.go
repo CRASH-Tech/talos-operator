@@ -30,7 +30,6 @@ type Machine struct {
 func (machine *Machine) Create(m v1alpha1.Machine) (v1alpha1.Machine, error) {
 	m.APIVersion = "talos.xfix.org/v1alpha1"
 	m.Kind = "Machine"
-	m.Spec.Bootstrap = false
 	m.Metadata.CreationTimestamp = time.Now().Format("2006-01-02T15:04:05Z")
 
 	item, err := machine.client.dynamicCreate(machine.resourceId, &m)

@@ -198,9 +198,10 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 				Finalizers: []string{"resources-finalizer.talos-operator.xfix.org"},
 			},
 			Spec: v1alpha1.MachineSpec{
-				Host:   host,
-				Config: selector.Spec.Config,
-				Params: ps,
+				Host:      host,
+				Config:    selector.Spec.Config,
+				Bootstrap: params["bootstrap"] == "true",
+				Params:    ps,
 			},
 		}
 		_, err = kClient.V1alpha1().Machine().Create(machine)
