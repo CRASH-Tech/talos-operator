@@ -110,5 +110,9 @@ machineSelectors:
   k-test-workers:
     template: workers
     params:
+      - key: token
+        value: "^welcome123$"
+      - key: role
+        value: "^worker$"
       - key: host
         value: '^10\.171\.120\.\d{1,3}$'

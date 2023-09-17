@@ -123,7 +123,7 @@ func listen() {
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
-	host := strings.Split(r.RemoteAddr, ":")[0] /////////////////////////////////////
+	host := strings.Split(r.RemoteAddr, ":")[0]
 	//host := "10.171.120.166"
 	params := make(map[string]string)
 	params["host"] = host
@@ -153,7 +153,6 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	///////////////////////
 	selectors, err := kClient.V1alpha1().MachineSelector().GetAll()
 	if err != nil {
 		log.Error(err)
@@ -164,75 +163,70 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, selector := range selectors {
-		pass := false
-		fail := false
 		for _, sParam := range selector.Spec.Params {
-			for k, v := range params {
-				if sParam.Key == k {
-					match, err := regexMatch(sParam.Value, v)
-					if err != nil {
-						log.Error(err)
-						w.WriteHeader(http.StatusInternalServerError)
-						w.Write([]byte("Internal error!"))
+			match, err := regexMatch(sParam.Value, params[sParam.Key])
+			if err != nil {
+				log.Error(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("Internal error!"))
 
-						return
-					}
+				return
+			}
 
-					if match {
-						pass = true
-					} else {
-						fail = true
-					}
-				}
+			if !match {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte("No selector found!"))
+
+				return
 			}
 		}
-		if pass && !fail {
-			ps := []v1alpha1.MachineParams{}
-			for k, v := range params {
-				if v != "" {
-					p := v1alpha1.MachineParams{
-						Key:   k,
-						Value: v,
-					}
-					ps = append(ps, p)
+
+		ps := []v1alpha1.MachineParams{}
+		for k, v := range params {
+			if v != "" {
+				p := v1alpha1.MachineParams{
+					Key:   k,
+					Value: v,
 				}
+				ps = append(ps, p)
 			}
+		}
 
-			machine := v1alpha1.Machine{
-				Metadata: api.CustomResourceMetadata{
-					Name:       host,
-					Finalizers: []string{"resources-finalizer.talos-operator.xfix.org"},
-				},
-				Spec: v1alpha1.MachineSpec{
-					Host:   host,
-					Config: selector.Spec.Config,
-					Params: ps,
-				},
-			}
-			_, err = kClient.V1alpha1().Machine().Create(machine)
-			if err != nil {
-				log.Error(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("Internal error!"))
-
-				return
-			}
-
-			machineConfig, err := kClient.GetMachineConfig(selector.Spec.Config, NS)
-			if err != nil {
-				log.Error(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("Internal error!"))
-
-				return
-			}
-
-			log.Infof("Send machineconfig %s for: %s", selector.Spec.Config, host)
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(machineConfig.MachineConfig))
+		machine := v1alpha1.Machine{
+			Metadata: api.CustomResourceMetadata{
+				Name:       host,
+				Finalizers: []string{"resources-finalizer.talos-operator.xfix.org"},
+			},
+			Spec: v1alpha1.MachineSpec{
+				Host:   host,
+				Config: selector.Spec.Config,
+				Params: ps,
+			},
+		}
+		_, err = kClient.V1alpha1().Machine().Create(machine)
+		if err != nil {
+			log.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Internal error!"))
 
 			return
 		}
+
+		machineConfig, err := kClient.GetMachineConfig(selector.Spec.Config, NS)
+		if err != nil {
+			log.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Internal error!"))
+
+			return
+		}
+
+		log.Infof("Send machineconfig %s for: %s", selector.Spec.Config, host)
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(machineConfig.MachineConfig))
+
+		return
+
 	}
 
 	log.Warnf("No selector found for: %s", host)
@@ -258,6 +252,7 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 		if machine.Status.LastApplyFail {
 			log.Warn("One or more machines have failed apply config. Working in readonly mode")
 			roMode = true
+
 			break
 		}
 		//CHECK FOR SAME HOST
@@ -273,6 +268,7 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 		machineConfig, err := kClient.GetMachineConfig(machine.Spec.Config, NS)
 		if err != nil {
 			log.Error(err)
+
 			continue
 		}
 
@@ -291,6 +287,7 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 					err := talos.Reset(ctx, machine.Spec.Host, machineConfig)
 					if err != nil {
 						log.Error(err)
+
 						continue
 					}
 
@@ -323,12 +320,7 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 							_, err := talos.ApplyConfiguration(ctx, machine.Spec.Host, machineConfig, tryMode)
 							if err != nil {
 								log.Error(err)
-								machine.Status.LastApplyFail = true
-								_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
-								if err != nil {
-									log.Error(err)
-									continue
-								}
+
 								continue
 							}
 
@@ -340,8 +332,10 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 								_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
 								if err != nil {
 									log.Error(err)
+
 									continue
 								}
+
 								continue
 							}
 						}
@@ -351,12 +345,7 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 						_, err := talos.ApplyConfiguration(ctx, machine.Spec.Host, machineConfig, mode)
 						if err != nil {
 							log.Error(err)
-							machine.Status.LastApplyFail = true
-							_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
-							if err != nil {
-								log.Error(err)
-								continue
-							}
+
 							continue
 						}
 
@@ -364,14 +353,17 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 						_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
 						if err != nil {
 							log.Error(err)
+
 							continue
 						}
 					} else {
 						log.Warnf("Last apply config to %s(%s) fail. Ignoring it", machine.Metadata.Name, machine.Spec.Host)
+
 						continue
 					}
 
 				}
+
 				//BOOTSTRAP
 				if machine.Status.ConfigHash != "" && machine.Spec.Bootstrap && !machine.Status.Bootstrapped {
 					log.Infof("Bootstrap %s(%s)", machine.Metadata.Name, machine.Spec.Host)
@@ -379,13 +371,16 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 					if err != nil {
 						log.Error(err)
 						if !strings.Contains(err.Error(), "AlreadyExists") {
+
 							continue
 						}
 					}
+
 					machine.Status.Bootstrapped = true
 					_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
 					if err != nil {
 						log.Error(err)
+
 						continue
 					}
 				}
@@ -395,15 +390,21 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 		}
 
 		//SERVICES
-		servicesStatus, err := talos.ServicesStatus(ctx, machine.Spec.Host, machineConfig, machine.Status)
-		if err != nil {
-			log.Error(err)
-		}
+		if machine.Status.ConfigHash != "" {
+			servicesStatus, err := talos.ServicesStatus(ctx, machine.Spec.Host, machineConfig, machine.Status)
+			if err != nil {
+				log.Warnf("Cannot get services status %s: %s", machine.Spec.Host, err)
 
-		machine.Status = servicesStatus
-		_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
-		if err != nil {
-			log.Error(err)
+				continue
+			}
+
+			machine.Status = servicesStatus
+			_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+			if err != nil {
+				log.Error(err)
+
+				continue
+			}
 		}
 
 	}
