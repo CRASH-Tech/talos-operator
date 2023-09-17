@@ -333,10 +333,10 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 								if err != nil {
 									log.Error(err)
 
-									continue
+									return
 								}
 
-								continue
+								return
 							}
 						}
 

@@ -157,7 +157,16 @@ templates:
         image: {{ index .cluster.images "kubelet" }}
         defaultRuntimeSeccompProfileEnabled: true
         disableManifestsDirectory: true
-      network: {}
+      network:
+        hostname: {{ .template.hostname }}
+        interfaces:
+          - interface: eth0
+            addresses:
+              - 192.168.0.1/24
+            routes:
+              - network: 0.0.0.0/0
+                gateway: 192.168.0.254
+            dhcp: false
       install:
         disk: /dev/sda
         image: {{ index .cluster.images "installer" }}
