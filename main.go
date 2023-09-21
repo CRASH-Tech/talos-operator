@@ -124,7 +124,7 @@ func listen() {
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
 	host := strings.Split(r.RemoteAddr, ":")[0]
-	//host := "10.171.120.166"
+	//host := "10.171.123.166"
 	params := make(map[string]string)
 	params["host"] = host
 
@@ -163,22 +163,21 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, selector := range selectors {
+		fail := false
 		for _, sParam := range selector.Spec.Params {
 			match, err := regexMatch(sParam.Value, params[sParam.Key])
 			if err != nil {
 				log.Error(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte("Internal error!"))
-
-				return
+				fail = true
 			}
 
 			if !match {
-				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte("No selector found!"))
-
-				return
+				fail = true
 			}
+		}
+
+		if fail {
+			continue
 		}
 
 		ps := []v1alpha1.MachineParams{}
