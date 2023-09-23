@@ -79,7 +79,7 @@ func init() {
 	config.DynamicClient = dynamic.NewForConfigOrDie(restConfig)
 	config.KubernetesClient = k8s.NewForConfigOrDie(restConfig)
 
-	NS = "talos-operator"
+	NS = "talos-cloud" //////////////////////////////////////////////////TODO: dddd
 }
 
 func main() {
@@ -203,7 +203,8 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 				Params:    ps,
 			},
 		}
-		_, err = kClient.V1alpha1().Machine().Create(machine)
+
+		machineConfig, err := kClient.GetMachineConfig(selector.Spec.Config, NS)
 		if err != nil {
 			log.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -212,7 +213,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		machineConfig, err := kClient.GetMachineConfig(selector.Spec.Config, NS)
+		_, err = kClient.V1alpha1().Machine().Create(machine)
 		if err != nil {
 			log.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
