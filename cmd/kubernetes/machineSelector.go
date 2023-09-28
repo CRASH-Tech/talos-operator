@@ -12,8 +12,8 @@ type MachineSelector struct {
 	resourceId schema.GroupVersionResource
 }
 
-func (machine *MachineSelector) Get(name string) (v1alpha1.MachineSelector, error) {
-	item, err := machine.client.dynamicGet(machine.resourceId, name)
+func (selector *MachineSelector) Get(name string) (v1alpha1.MachineSelector, error) {
+	item, err := selector.client.dynamicGet(selector.resourceId, name)
 	if err != nil {
 		return v1alpha1.MachineSelector{}, err
 	}
@@ -27,8 +27,8 @@ func (machine *MachineSelector) Get(name string) (v1alpha1.MachineSelector, erro
 	return result, nil
 }
 
-func (machine *MachineSelector) GetAll() ([]v1alpha1.MachineSelector, error) {
-	items, err := machine.client.dynamicGetAll(machine.resourceId)
+func (selector *MachineSelector) GetAll() ([]v1alpha1.MachineSelector, error) {
+	items, err := selector.client.dynamicGetAll(selector.resourceId)
 	if err != nil {
 		panic(err)
 	}

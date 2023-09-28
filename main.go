@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/CRASH-Tech/talos-operator/cmd/common"
@@ -31,6 +32,7 @@ var (
 	config  common.Config
 	kClient *kubernetes.Client
 	NS      string
+	mutex   sync.Mutex
 )
 
 func init() {
@@ -123,6 +125,9 @@ func listen() {
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	host := strings.Split(r.RemoteAddr, ":")[0]
 	//host := "10.171.123.166"
 	params := make(map[string]string)
@@ -191,15 +196,41 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		ownerReference := api.CustomResourceOwnerReference{
+			ApiVersion:         selector.APIVersion,
+			Kind:               selector.Kind,
+			Name:               selector.Metadata.Name,
+			Uid:                selector.Metadata.Uid,
+			BlockOwnerDeletion: true,
+		}
+
+		//FIND SELECTOR MACHINES
+		var selectorMachines []v1alpha1.Machine
+		for _, machine := range machines {
+			for _, or := range machine.Metadata.OwnerReferences {
+				if selector.Metadata.Uid == or.Uid {
+					selectorMachines = append(selectorMachines, machine)
+				}
+			}
+		}
+
+		var bootstrap bool
+		if selector.Spec.Bootstrap && len(selectorMachines) == 0 {
+			bootstrap = true
+		} else {
+			bootstrap = params["bootstrap"] == "true"
+		}
+
 		machine := v1alpha1.Machine{
 			Metadata: api.CustomResourceMetadata{
-				Name:       host,
-				Finalizers: []string{"resources-finalizer.talos-operator.xfix.org"},
+				Name:            host,
+				Finalizers:      []string{"resources-finalizer.talos-operator.xfix.org"},
+				OwnerReferences: []api.CustomResourceOwnerReference{ownerReference},
 			},
 			Spec: v1alpha1.MachineSpec{
 				Host:      host,
 				Config:    selector.Spec.Config,
-				Bootstrap: params["bootstrap"] == "true",
+				Bootstrap: bootstrap,
 				Params:    ps,
 			},
 		}
@@ -272,12 +303,6 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 
 			continue
 		}
-
-		///
-		// machine.Status.LastApplyFail = false
-		// _, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
-		// continue
-		///
 
 		if !roMode {
 			//PROTECTION CHECK

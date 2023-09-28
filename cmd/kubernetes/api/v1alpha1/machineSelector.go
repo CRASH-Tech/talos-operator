@@ -10,6 +10,7 @@ type MachineSelector struct {
 }
 
 type MachineSelectorSpec struct {
-	Config string          `json:"config"`
-	Params []MachineParams `json:"params"`
+	Config    string          `json:"config"`
+	Bootstrap bool            `json:"bootstrap"`
+	Params    []MachineParams `json:"params"`
 }
