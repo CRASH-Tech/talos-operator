@@ -83,6 +83,9 @@ spec:
         - name: config
           type: string
           jsonPath: .spec.config
+        - name: Bootstrap
+          type: string
+          jsonPath: .spec.bootstrap
         - name: Protected
           type: string
           jsonPath: .spec.protected
