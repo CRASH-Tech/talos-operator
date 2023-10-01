@@ -341,7 +341,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err = kClient.V1alpha1().Machine().Create(machine)
+		machine, err = kClient.V1alpha1().Machine().Create(machine)
 		if err != nil {
 			log.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -415,7 +415,7 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 					}
 
 					machine.Metadata.Finalizers = []string{}
-					_, err = kClient.V1alpha1().Machine().Patch(machine)
+					machine, err = kClient.V1alpha1().Machine().Patch(machine)
 					if err != nil {
 						log.Error(err)
 					}
@@ -452,7 +452,7 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 							if !talos.Check(ctx, machine.Spec.Host, machineConfig) {
 								log.Warnf("Machine %s(%s) health check fail", machine.Metadata.Name, machine.Spec.Host)
 								machine.Status.LastApplyFail = true
-								_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+								machine, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
 								if err != nil {
 									log.Error(err)
 
@@ -473,7 +473,7 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 						}
 
 						machine.Status.ConfigHash = newHash
-						_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+						machine, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
 						if err != nil {
 							log.Error(err)
 
@@ -500,7 +500,7 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 					}
 
 					machine.Status.Bootstrapped = true
-					_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+					machine, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
 					if err != nil {
 						log.Error(err)
 
@@ -522,7 +522,7 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 			}
 
 			machine.Status = servicesStatus
-			_, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
+			machine, err = kClient.V1alpha1().Machine().UpdateStatus(machine)
 			if err != nil {
 				log.Error(err)
 
