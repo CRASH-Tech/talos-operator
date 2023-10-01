@@ -18,6 +18,8 @@ import (
 	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api"
 	"github.com/CRASH-Tech/talos-operator/cmd/kubernetes/api/v1alpha1"
 	"github.com/CRASH-Tech/talos-operator/cmd/talos"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	talosMachine "github.com/siderolabs/talos/pkg/machinery/api/machine"
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
@@ -33,6 +35,28 @@ var (
 	kClient *kubernetes.Client
 	NS      string
 	mutex   sync.Mutex
+
+	// 	apid: Running/Healthy
+	// 	bootstrapped: true
+	// 	confighash: 7397baad356cd5fdf9021f1846613827
+	// 	containerd: Running/Healthy
+	// 	cri: Running/Healthy
+	// 	etcd: Finished/Unhealthy
+	// 	kubelet: Running/Healthy
+	// 	lastapplyfail: false
+	// 	machined: Running/Healthy
+
+	machineStatus = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "machine_status",
+			Help: "The talos machine service status",
+		},
+		[]string{
+			"host",
+			"config",
+			"service",
+		},
+	)
 )
 
 func init() {
@@ -82,6 +106,8 @@ func init() {
 	config.KubernetesClient = k8s.NewForConfigOrDie(restConfig)
 
 	NS = "talos-cloud" //////////////////////////////////////////////////TODO: dddd
+
+	prometheus.MustRegister(machineStatus)
 }
 
 func main() {
@@ -94,7 +120,7 @@ func main() {
 
 	for {
 		processV1aplha1Machines(kClient)
-
+		metrics()
 		time.Sleep(5 * time.Second)
 	}
 }
@@ -116,12 +142,83 @@ func readConfig(path string) (common.Config, error) {
 
 func listen() {
 	go func() {
+		http.Handle("/metrics", promhttp.Handler())
 		http.HandleFunc("/register", registerHandler)
 		err := http.ListenAndServe(config.Listen, nil)
 		if err != nil {
 			log.Panic(err)
 		}
 	}()
+}
+
+func healthConverter(s string) float64 {
+	switch s {
+	case "Running/Healthy":
+		return 1
+	case "Running/Unhealthy":
+		return 0
+	default:
+		return -1
+	}
+}
+
+func metrics() {
+	machines, err := kClient.V1alpha1().Machine().GetAll()
+	if err != nil {
+		log.Error(err)
+
+		return
+	}
+
+	for _, machine := range machines {
+		machineStatus.WithLabelValues(
+			machine.Spec.Host,
+			machine.Spec.Config,
+			"etcd",
+		).Set(healthConverter(machine.Status.Etcd))
+
+		machineStatus.WithLabelValues(
+			machine.Spec.Host,
+			machine.Spec.Config,
+			"apid",
+		).Set(healthConverter(machine.Status.Apid))
+
+		machineStatus.WithLabelValues(
+			machine.Spec.Host,
+			machine.Spec.Config,
+			"containerd",
+		).Set(healthConverter(machine.Status.Containerd))
+
+		machineStatus.WithLabelValues(
+			machine.Spec.Host,
+			machine.Spec.Config,
+			"cri",
+		).Set(healthConverter(machine.Status.Cri))
+
+		machineStatus.WithLabelValues(
+			machine.Spec.Host,
+			machine.Spec.Config,
+			"kubelet",
+		).Set(healthConverter(machine.Status.Kubelet))
+
+		machineStatus.WithLabelValues(
+			machine.Spec.Host,
+			machine.Spec.Config,
+			"machined",
+		).Set(healthConverter(machine.Status.Machined))
+
+		var confifOK float64
+		if machine.Status.LastApplyFail {
+			confifOK = 0
+		} else {
+			confifOK = 1
+		}
+		machineStatus.WithLabelValues(
+			machine.Spec.Host,
+			machine.Spec.Config,
+			"config",
+		).Set(confifOK)
+	}
 }
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
