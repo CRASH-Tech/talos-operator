@@ -30,11 +30,12 @@ import (
 )
 
 var (
-	version = "0.0.1"
-	config  common.Config
-	kClient *kubernetes.Client
-	NS      string
-	mutex   sync.Mutex
+	version   = "0.0.1"
+	config    common.Config
+	kClient   *kubernetes.Client
+	namespace string
+	hostname  string
+	mutex     sync.Mutex
 
 	// 	apid: Running/Healthy
 	// 	bootstrapped: true
@@ -105,16 +106,26 @@ func init() {
 	config.DynamicClient = dynamic.NewForConfigOrDie(restConfig)
 	config.KubernetesClient = k8s.NewForConfigOrDie(restConfig)
 
-	NS = "talos-cloud" //////////////////////////////////////////////////TODO: dddd
+	namespace = "talos-cloud" //////////////////////////////////////////////////TODO: dddd
+	hostname = os.Getenv("HOSTNAME")
 
 	prometheus.MustRegister(machineStatus)
 }
 
 func main() {
-	log.Infof("Starting talos-operator %s", version)
-
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	kClient = kubernetes.NewClient(ctx, *config.DynamicClient, *config.KubernetesClient)
+
+	leaseLockName := "talos-operator"
+	leaseLockNamespace := namespace
+
+	lock := getNewLock(leaseLockName, hostname, leaseLockNamespace)
+	runLeaderElection(lock, ctx, hostname)
+}
+
+func worker() {
+	log.Infof("Starting talos-operator %s", version)
 
 	listen()
 
@@ -332,7 +343,7 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 			},
 		}
 
-		machineConfig, err := kClient.GetMachineConfig(selector.Spec.Config, NS)
+		machineConfig, err := kClient.GetMachineConfig(selector.Spec.Config, namespace)
 		if err != nil {
 			log.Error(err)
 			w.WriteHeader(http.StatusInternalServerError)
@@ -394,7 +405,7 @@ func processV1aplha1Machines(kClient *kubernetes.Client) {
 	}
 
 	for _, machine := range machines {
-		machineConfig, err := kClient.GetMachineConfig(machine.Spec.Config, NS)
+		machineConfig, err := kClient.GetMachineConfig(machine.Spec.Config, namespace)
 		if err != nil {
 			log.Error(err)
 
