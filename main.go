@@ -106,7 +106,12 @@ func init() {
 	config.DynamicClient = dynamic.NewForConfigOrDie(restConfig)
 	config.KubernetesClient = k8s.NewForConfigOrDie(restConfig)
 
-	namespace = "talos-cloud" //////////////////////////////////////////////////TODO: dddd
+	ns, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	if err != nil {
+		log.Panic(err)
+	}
+
+	namespace = string(ns)
 	hostname = os.Getenv("HOSTNAME")
 
 	prometheus.MustRegister(machineStatus)
@@ -237,7 +242,6 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	defer mutex.Unlock()
 
 	host := strings.Split(r.RemoteAddr, ":")[0]
-	//host := "10.171.123.166"
 	params := make(map[string]string)
 	params["host"] = host
 
