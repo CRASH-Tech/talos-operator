@@ -120,6 +120,7 @@ func init() {
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	kClient = kubernetes.NewClient(ctx, *config.DynamicClient, *config.KubernetesClient)
 
 	leaseLockName := "talos-operator"
