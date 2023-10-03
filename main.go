@@ -22,7 +22,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	talosMachine "github.com/siderolabs/talos/pkg/machinery/api/machine"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/dynamic"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -140,21 +139,6 @@ func worker() {
 		metrics()
 		time.Sleep(5 * time.Second)
 	}
-}
-
-func readConfig(path string) (common.Config, error) {
-	config := common.Config{}
-
-	yamlFile, err := ioutil.ReadFile(path)
-	if err != nil {
-		return common.Config{}, err
-	}
-	err = yaml.Unmarshal(yamlFile, &config)
-	if err != nil {
-		return common.Config{}, err
-	}
-
-	return config, err
 }
 
 func listen() {
