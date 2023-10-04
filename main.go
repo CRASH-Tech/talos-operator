@@ -29,22 +29,13 @@ import (
 )
 
 var (
-	version   = "0.0.1"
-	config    common.Config
-	kClient   *kubernetes.Client
-	namespace string
-	hostname  string
-	mutex     sync.Mutex
-
-	// 	apid: Running/Healthy
-	// 	bootstrapped: true
-	// 	confighash: 7397baad356cd5fdf9021f1846613827
-	// 	containerd: Running/Healthy
-	// 	cri: Running/Healthy
-	// 	etcd: Finished/Unhealthy
-	// 	kubelet: Running/Healthy
-	// 	lastapplyfail: false
-	// 	machined: Running/Healthy
+	version       = "0.0.3"
+	config        common.Config
+	kClient       *kubernetes.Client
+	namespace     string
+	hostname      string
+	mutex         sync.Mutex
+	leaseLockName = "talos-operator"
 
 	machineStatus = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -122,10 +113,10 @@ func main() {
 
 	kClient = kubernetes.NewClient(ctx, *config.DynamicClient, *config.KubernetesClient)
 
-	leaseLockName := "talos-operator"
-	leaseLockNamespace := namespace
+	mutex.Lock()
+	setLeaderLabel(false)
 
-	lock := getNewLock(leaseLockName, hostname, leaseLockNamespace)
+	lock := getNewLock(leaseLockName, hostname, namespace)
 	runLeaderElection(lock, ctx, hostname)
 }
 
