@@ -217,7 +217,13 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	host := strings.Split(r.RemoteAddr, ":")[0]
+	var host string
+	if r.Header.Get("X-Forwarded-For") != "" {
+		host = r.Header.Get("X-Forwarded-For")
+	} else {
+		host = strings.Split(r.RemoteAddr, ":")[0]
+	}
+
 	params := make(map[string]string)
 	params["host"] = host
 
