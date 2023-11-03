@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	version       = "0.0.3"
+	version       = "0.0.5"
 	config        common.Config
 	kClient       *kubernetes.Client
 	namespace     string
@@ -43,6 +43,7 @@ var (
 			Help: "The talos machine service status",
 		},
 		[]string{
+			"machine",
 			"host",
 			"config",
 			"service",
@@ -164,36 +165,42 @@ func metrics() {
 
 	for _, machine := range machines {
 		machineStatus.WithLabelValues(
+			machine.Metadata.Name,
 			machine.Spec.Host,
 			machine.Spec.Config,
 			"etcd",
 		).Set(healthConverter(machine.Status.Etcd))
 
 		machineStatus.WithLabelValues(
+			machine.Metadata.Name,
 			machine.Spec.Host,
 			machine.Spec.Config,
 			"apid",
 		).Set(healthConverter(machine.Status.Apid))
 
 		machineStatus.WithLabelValues(
+			machine.Metadata.Name,
 			machine.Spec.Host,
 			machine.Spec.Config,
 			"containerd",
 		).Set(healthConverter(machine.Status.Containerd))
 
 		machineStatus.WithLabelValues(
+			machine.Metadata.Name,
 			machine.Spec.Host,
 			machine.Spec.Config,
 			"cri",
 		).Set(healthConverter(machine.Status.Cri))
 
 		machineStatus.WithLabelValues(
+			machine.Metadata.Name,
 			machine.Spec.Host,
 			machine.Spec.Config,
 			"kubelet",
 		).Set(healthConverter(machine.Status.Kubelet))
 
 		machineStatus.WithLabelValues(
+			machine.Metadata.Name,
 			machine.Spec.Host,
 			machine.Spec.Config,
 			"machined",
@@ -206,6 +213,7 @@ func metrics() {
 			confifOK = 1
 		}
 		machineStatus.WithLabelValues(
+			machine.Metadata.Name,
 			machine.Spec.Host,
 			machine.Spec.Config,
 			"config",
