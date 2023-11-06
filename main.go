@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	version       = "0.0.5"
+	version       = "1.0.0"
 	config        common.Config
 	kClient       *kubernetes.Client
 	namespace     string
