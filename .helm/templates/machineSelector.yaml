@@ -1,0 +1,14 @@
+{{- range $machineSelector, $machineSelectorData := $.Values.machineSelectors }}
+apiVersion: talos.xfix.org/v1alpha1
+kind: MachineSelector
+metadata:
+  name: {{ $machineSelector }}
+spec:
+  config: {{ printf "talos-%s-%s" $.Values.cluster.name $machineSelectorData.template }}
+  params:
+  {{- range $k, $v := $machineSelectorData.params }}
+    - key: {{ $v.key }}
+      value: '{{ $v.value }}'
+  {{- end }}
+---
+{{- end }}
